@@ -1,5 +1,5 @@
 {
-  "name": "tabletop-civ",
+  "name": "tabletop-gods",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,9 +10,10 @@
     "dev:status": "iwsdk dev status",
     "reference:status": "iwsdk reference status",
     "reference:warmup": "iwsdk reference warmup",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test \"tests/**/*.test.ts\""
   },
   "dependencies": {
     "@iwsdk/core": "1.1.0-rc.2",

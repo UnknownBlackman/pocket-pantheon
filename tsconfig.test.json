@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "tests/**/*.ts",
+    "src/sim/**/*.ts",
+    "src/core/**/*.ts",
+    "src/xr/gestures.ts"
+  ]
+}
