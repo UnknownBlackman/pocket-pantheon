@@ -1,6 +1,6 @@
 /**
  * Runs the simulation at a fixed rate with an accumulator. Does nothing while
- * placing, paused, or while the XR session is hidden or blurred.
+ * placing, paused, outside XR, or while the XR session is hidden or blurred.
  */
 import { createSystem, VisibilityState } from '@iwsdk/core';
 import { events } from '../core/events.ts';
@@ -16,9 +16,10 @@ export class SimSystem extends createSystem({}) {
   private accumulator = 0;
 
   update(delta: number): void {
-    const vis = this.world.visibilityState.peek();
-    const hidden = vis === VisibilityState.Hidden || vis === VisibilityState.VisibleBlurred;
-    if (game.stage !== 'playing' || game.paused || hidden) {
+    // Only an immersive session advances the village. The flat browser
+    // preview shows it idling, so the session is not used up before XR.
+    const inXR = this.world.visibilityState.peek() === VisibilityState.Visible;
+    if (game.stage !== 'playing' || game.paused || !inXR) {
       this.accumulator = 0;
       return;
     }

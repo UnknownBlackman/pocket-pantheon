@@ -21,12 +21,13 @@ import {
 import type { Entity } from '@iwsdk/core';
 import { makeGhost, makeReticle } from '../art/ghost.ts';
 import { events } from '../core/events.ts';
+import { LAYOUT } from '../sim/rules.ts';
 import { setHintPanel } from '../ui/hint-panel.ts';
 import {
   fallbackPosition,
   isTableHeight,
   pickTablePlane,
-  polygonArea,
+  pointInPolygon,
 } from '../xr/placement.ts';
 import type { PlaneCandidate } from '../xr/placement.ts';
 import { VillageRoot } from './components.ts';
@@ -61,7 +62,11 @@ export class PlacementSystem extends createSystem({
   private tmpQ = new Quaternion();
   private up = new Vector3(0, 1, 0);
   private candidates: PlaneCandidate[] = [];
-  private candidateEntities: Entity[] = [];
+  private candidateSpots: Vector3[] = [];
+  private ahead = new Vector3();
+  private forward = new Vector3();
+  private head = new Vector3();
+  private planeSpot = new Vector3();
 
   init(): void {
     const ghostObject = makeGhost();
@@ -202,9 +207,8 @@ export class PlacementSystem extends createSystem({
     this.planeScanIn -= delta;
     if (this.planeScanIn <= 0) {
       this.planeScanIn = PLANE_SCAN_INTERVAL;
-      const plane = this.findTablePlane();
-      if (plane?.object3D) {
-        plane.object3D.getWorldPosition(ghostObj.position);
+      if (this.findTablePlane(this.planeSpot)) {
+        ghostObj.position.copy(this.planeSpot);
         this.setSource('plane');
         return;
       }
@@ -217,7 +221,9 @@ export class PlacementSystem extends createSystem({
       reticle.object3D.getWorldPosition(this.tmpA);
       reticle.object3D.getWorldQuaternion(this.tmpQ);
       this.tmpB.copy(this.up).applyQuaternion(this.tmpQ);
-      if (this.tmpB.y > 0.9 && isTableHeight(this.tmpA.y - this.floorY())) {
+      this.updateHeadFrame();
+      const reach = Math.hypot(this.tmpA.x - this.head.x, this.tmpA.z - this.head.z);
+      if (this.tmpB.y > 0.9 && isTableHeight(this.tmpA.y - this.floorY()) && reach <= LAYOUT.maxReach) {
         ghostObj.position.copy(this.tmpA);
         this.setSource('hit-test');
         return;
@@ -226,14 +232,23 @@ export class PlacementSystem extends createSystem({
 
     // 3. The floating fallback platform, placed once; the player can drag it.
     if (this.source === 'none' && this.searchTime > FALLBACK_AFTER) {
-      const head = this.headPosition(this.tmpA);
-      this.player.head.getWorldQuaternion(this.tmpQ);
-      this.tmpB.set(0, 0, -1).applyQuaternion(this.tmpQ);
-      const yaw = Math.atan2(-this.tmpB.x, -this.tmpB.z);
-      const p = fallbackPosition(head, yaw);
-      ghostObj.position.set(p.x, p.y, p.z);
+      this.updateHeadFrame();
+      ghostObj.position.copy(this.ahead);
       this.setSource('fallback');
     }
+  }
+
+  /** Head position, flat forward direction and the fallback spot ahead. */
+  private updateHeadFrame(): void {
+    this.headPosition(this.head);
+    this.player.head.getWorldQuaternion(this.tmpQ);
+    this.forward.set(0, 0, -1).applyQuaternion(this.tmpQ);
+    this.forward.y = 0;
+    if (this.forward.lengthSq() < 1e-6) this.forward.set(0, 0, -1);
+    this.forward.normalize();
+    const yaw = Math.atan2(-this.forward.x, -this.forward.z);
+    const p = fallbackPosition(this.head, yaw);
+    this.ahead.set(p.x, p.y, p.z);
   }
 
   private setSource(source: 'plane' | 'hit-test' | 'fallback'): void {
@@ -242,30 +257,45 @@ export class PlacementSystem extends createSystem({
     console.info(`[placement] candidate from ${source}`);
   }
 
-  private findTablePlane(): Entity | undefined {
+  /** Finds a reachable table spot on a detected plane; writes it to `out`. */
+  private findTablePlane(out: Vector3): boolean {
+    this.updateHeadFrame();
     this.candidates.length = 0;
-    this.candidateEntities.length = 0;
     const floor = this.floorY();
+    let n = 0;
     for (const e of this.queries.planes.entities) {
       try {
         const plane = e.getValue(XRPlane, '_plane') as
           | (XRPlane & { semanticLabel?: string })
           | undefined;
-        if (!plane || !e.object3D) continue;
-        e.object3D.getWorldPosition(this.tmpA);
+        const obj = e.object3D;
+        if (!plane || !obj) continue;
+        if (!this.candidateSpots[n]) this.candidateSpots[n] = new Vector3();
+        const spot = this.candidateSpots[n];
+        // Is the spot 50 cm ahead over this plane? Test in plane space.
+        this.tmpA.copy(this.ahead);
+        obj.worldToLocal(this.tmpA);
+        const containsAhead = pointInPolygon(this.tmpA.x, this.tmpA.z, plane.polygon);
+        obj.getWorldPosition(spot);
+        if (containsAhead) spot.set(this.ahead.x, spot.y, this.ahead.z);
+        this.tmpB.set(spot.x - this.head.x, 0, spot.z - this.head.z);
         this.candidates.push({
-          height: this.tmpA.y - floor,
-          area: polygonArea(plane.polygon),
+          height: spot.y - floor,
           horizontal: plane.orientation === 'horizontal',
           label: plane.semanticLabel,
+          reach: this.tmpB.length(),
+          inFront: this.tmpB.dot(this.forward) > 0,
+          containsAhead,
         });
-        this.candidateEntities.push(e);
+        n++;
       } catch (err) {
         console.warn('[placement] bad plane', err);
       }
     }
     const i = pickTablePlane(this.candidates);
-    return i >= 0 ? this.candidateEntities[i] : undefined;
+    if (i < 0) return false;
+    out.copy(this.candidateSpots[i]);
+    return true;
   }
 
   private confirm(root: Entity): void {

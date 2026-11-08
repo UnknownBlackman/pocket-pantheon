@@ -199,4 +199,6 @@ export const LAYOUT = {
   /** Accept horizontal planes this high above the floor as tables. */
   tableMinHeight: 0.4,
   tableMaxHeight: 1.0,
+  /** Seated reach: ignore table spots further than this from the head (horizontal). */
+  maxReach: 0.9,
 } as const;

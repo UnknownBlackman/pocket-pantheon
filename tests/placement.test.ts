@@ -5,6 +5,7 @@ import {
   fallbackPosition,
   isTableHeight,
   pickTablePlane,
+  pointInPolygon,
   polygonArea,
 } from '../src/xr/placement.ts';
 
@@ -19,15 +20,29 @@ describe('placement helpers', () => {
     assert.equal(polygonArea(square), 2);
   });
 
-  it('prefers a labelled table, else the largest table-height horizontal plane', () => {
-    const floor = { height: 0, area: 9, horizontal: true };
-    const wall = { height: 0.8, area: 4, horizontal: false };
-    const desk = { height: 0.75, area: 0.8, horizontal: true };
-    const bench = { height: 0.45, area: 0.5, horizontal: true };
-    assert.equal(pickTablePlane([floor, wall, desk, bench]), 2);
-    const labelled = { height: 1.2, area: 0.3, horizontal: true, label: 'table' };
-    assert.equal(pickTablePlane([floor, desk, labelled]), 2);
-    assert.equal(pickTablePlane([floor, wall]), -1);
+  it('tests points inside polygons', () => {
+    const sq = [
+      { x: -1, z: -1 },
+      { x: 1, z: -1 },
+      { x: 1, z: 1 },
+      { x: -1, z: 1 },
+    ];
+    assert.ok(pointInPolygon(0, 0, sq));
+    assert.ok(!pointInPolygon(2, 0, sq));
+  });
+
+  it('only picks reachable table spots in front, preferring one under the ahead spot', () => {
+    const base = { horizontal: true, inFront: true, containsAhead: false, reach: 0.6, height: 0.75 };
+    const floor = { ...base, height: 0, reach: 0.3 };
+    const behind = { ...base, inFront: false, reach: 0.4 };
+    const far = { ...base, reach: 1.6 };
+    const near = { ...base, reach: 0.7 };
+    const ahead = { ...base, reach: 0.8, containsAhead: true };
+    assert.equal(pickTablePlane([floor, behind, far]), -1);
+    assert.equal(pickTablePlane([floor, behind, far, near]), 3);
+    assert.equal(pickTablePlane([near, ahead]), 1);
+    const labelled = { ...base, height: 1.2, reach: 0.85, label: 'table' };
+    assert.equal(pickTablePlane([ahead, labelled]), 1);
   });
 
   it('accepts table heights only', () => {
