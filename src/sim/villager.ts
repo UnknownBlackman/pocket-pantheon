@@ -1,0 +1,321 @@
+/**
+ * Villager needs, beliefs and decisions. Pure simulation code.
+ */
+import type { EventBus } from '../core/events.ts';
+import { addChronicle } from './chronicle.ts';
+import { clamp, clamp01, clampToDisc, dist, stepTowards } from './math.ts';
+import { random, randomRange } from './random.ts';
+import { RULES } from './rules.ts';
+import type { Building, BuildingKind, Intent, Villager, World } from './types.ts';
+
+const R = RULES;
+
+export function isNight(world: World): boolean {
+  return world.timeOfDay >= R.session.nightStart;
+}
+
+export function buildingById(world: World, id: string | null): Building | undefined {
+  if (id === null) return undefined;
+  return world.buildings.find((b) => b.id === id);
+}
+
+export function isSheltered(world: World, x: number, z: number): boolean {
+  for (const e of world.effects) {
+    if (e.kind !== 'shelter') continue;
+    const dx = x - e.pos.x;
+    const dz = z - e.pos.z;
+    if (dx * dx + dz * dz <= e.radius * e.radius) return true;
+  }
+  return false;
+}
+
+export function isDependent(v: Villager): boolean {
+  return v.beliefs.initiative < R.decisions.dependentInitiative;
+}
+
+export function updateMood(v: Villager): void {
+  const avgNeed = (v.needs.hunger + v.needs.fatigue) / 2;
+  const belief = (v.beliefs.faith + v.beliefs.initiative) / 2;
+  v.mood = clamp01(
+    1 - R.mood.needWeight * avgNeed + R.mood.beliefWeight * (belief - 0.5),
+  );
+}
+
+function nearestOfKind(
+  world: World,
+  v: Villager,
+  kind: BuildingKind,
+  prefer?: (b: Building) => number,
+): Building | undefined {
+  let best: Building | undefined;
+  let bestScore = Infinity;
+  for (const b of world.buildings) {
+    if (b.kind !== kind) continue;
+    const score = dist(v.pos, b.pos) - (prefer ? prefer(b) : 0);
+    if (score < bestScore) {
+      bestScore = score;
+      best = b;
+    }
+  }
+  return best;
+}
+
+function anyFieldNearlyRipe(world: World): boolean {
+  for (const b of world.buildings) {
+    if (b.kind === 'field' && b.growth >= R.farming.ripeAt * 0.8) return true;
+  }
+  return false;
+}
+
+/** Points the villager at a building for the given intent. */
+export function assignIntent(
+  world: World,
+  v: Villager,
+  intent: Intent,
+  building: Building | undefined,
+  commit: number,
+): void {
+  v.intent = intent;
+  v.commit = commit;
+  v.prayProgress = 0;
+  if (building) {
+    v.targetId = building.id;
+    // Stand just off-centre so several villagers do not stack exactly.
+    const angle = random(world) * Math.PI * 2;
+    const r = building.kind === 'field' ? 0.025 : 0.035;
+    v.target = { x: building.pos.x + Math.cos(angle) * r, z: building.pos.z + Math.sin(angle) * r };
+  } else if (intent === 'idle') {
+    v.targetId = null;
+    if (isDependent(v)) {
+      v.target = null; // waits where they stand
+    } else {
+      // Wander a little.
+      const t = {
+        x: v.pos.x + randomRange(world, -0.05, 0.05),
+        z: v.pos.z + randomRange(world, -0.05, 0.05),
+      };
+      clampToDisc(t, R.village.radius * 0.85);
+      v.target = t;
+    }
+  } else {
+    v.targetId = null;
+    v.target = null;
+  }
+}
+
+/** The decision rule: score each candidate action and pick the highest. */
+export function decide(world: World, v: Villager): void {
+  if (world.phase !== 'day') {
+    const fire = nearestOfKind(world, v, 'campfire');
+    if (v.intent !== 'gather') assignIntent(world, v, 'gather', fire, Infinity);
+    return;
+  }
+
+  // "Too dependent": waits for a bless or a lift.
+  if (isDependent(v)) {
+    if (v.intent !== 'idle' || v.target !== null) {
+      assignIntent(world, v, 'idle', undefined, 0);
+    }
+    return;
+  }
+
+  const noise = R.sim.decisionNoise;
+  const night = isNight(world);
+  const farm =
+    v.needs.hunger +
+    (anyFieldNearlyRipe(world) ? R.decisions.ripeFieldBonus : 0) +
+    random(world) * noise;
+  const rest =
+    v.needs.fatigue * (night ? R.decisions.nightRestMultiplier : 1) +
+    random(world) * noise;
+  const canPray =
+    v.needs.hunger < R.decisions.prayNeedsBelow &&
+    v.needs.fatigue < R.decisions.prayNeedsBelow;
+  const pray = canPray
+    ? v.beliefs.faith * R.decisions.prayFaithWeight + random(world) * noise
+    : -1;
+  const idle = R.decisions.idleScore + random(world) * noise;
+
+  const stick = R.decisions.stickiness;
+  const scores: Record<'idle' | 'farm' | 'rest' | 'pray', number> = { idle, farm, rest, pray };
+  if (v.intent !== 'gather') scores[v.intent] += stick;
+
+  let intent: Intent = 'idle';
+  let best = scores.idle;
+  if (scores.farm > best) { best = scores.farm; intent = 'farm'; }
+  if (scores.rest > best) { best = scores.rest; intent = 'rest'; }
+  if (scores.pray > best) { best = scores.pray; intent = 'pray'; }
+
+  if (intent === v.intent) {
+    if (intent !== 'idle') {
+      if (v.targetId !== null) return; // keep going
+    } else {
+      // Contented villagers mostly stand around, sometimes wander.
+      if (v.target !== null || random(world) > R.decisions.wanderChance) return;
+    }
+  }
+
+  let building: Building | undefined;
+  if (intent === 'farm') {
+    building = nearestOfKind(world, v, 'field', (b) => b.growth * 0.1 + b.water * 0.05);
+  } else if (intent === 'rest') {
+    building = buildingById(world, v.homeId) ?? nearestOfKind(world, v, 'hut');
+  } else if (intent === 'pray') {
+    building = nearestOfKind(world, v, 'shrine');
+  }
+  assignIntent(world, v, intent, building, R.decisions.minCommitSeconds);
+}
+
+function workMultiplier(world: World, v: Villager, b: Building): number {
+  let m = 1;
+  if (b.water >= 0.8) m *= R.farming.boostedMultiplier; // watered
+  if (b.blessed > 0) m *= R.powers.blessWorkMultiplier;
+  if (v.blessed > 0) m *= R.powers.blessWorkMultiplier;
+  return m;
+}
+
+function doWork(world: World, v: Villager, dt: number, bus?: EventBus): void {
+  const b = buildingById(world, v.targetId);
+  if (!b) {
+    v.activity = 'idle';
+    return;
+  }
+  switch (v.intent) {
+    case 'farm': {
+      v.activity = 'farm';
+      if (b.water >= R.farming.dryBelow) {
+        b.growth += R.farming.growthPerWorker * workMultiplier(world, v, b) * dt;
+        if (b.growth >= R.farming.ripeAt) {
+          b.growth = 0;
+          world.food = Math.min(100, world.food + R.farming.harvestFood);
+          world.stats.harvests += 1;
+          world.totals.harvests += 1;
+          if (world.totals.harvests === 1) {
+            addChronicle(world, 'first-harvest', { name: v.name }, [v.id], bus);
+          }
+        }
+      }
+      // Eat from the village stock while at the field.
+      const eat = Math.min(
+        v.needs.hunger,
+        R.needs.eatPerSecond * dt,
+        world.food / R.farming.foodPerHunger,
+      );
+      if (eat > 0) {
+        v.needs.hunger -= eat;
+        world.food = Math.max(0, world.food - eat * R.farming.foodPerHunger);
+      }
+      break;
+    }
+    case 'rest': {
+      v.activity = 'rest';
+      const mult = b.blessed > 0 ? R.needs.blessedRestMultiplier : 1;
+      v.needs.fatigue -= R.needs.restPerSecond * mult * dt;
+      break;
+    }
+    case 'pray': {
+      v.activity = 'pray';
+      v.prayProgress += dt;
+      if (v.prayProgress >= R.favor.prayerSeconds) {
+        v.prayProgress -= R.favor.prayerSeconds;
+        world.favor = Math.min(R.favor.max, world.favor + R.favor.perPrayer);
+        world.stats.prayers += 1;
+        world.totals.prayers += 1;
+      }
+      break;
+    }
+    case 'gather': {
+      v.activity = world.phase === 'dusk' ? 'cheer' : 'idle';
+      break;
+    }
+    default:
+      v.activity = 'idle';
+  }
+}
+
+function startPanic(world: World, v: Villager, bus?: EventBus): void {
+  v.panic = R.weather.panicSeconds;
+  v.activity = 'panic';
+  world.stats.panics += 1;
+  if (world.stats.panics === 1) {
+    addChronicle(world, 'panic', { name: v.name }, [v.id], bus);
+  }
+}
+
+/** Advance one villager by dt seconds. */
+export function updateVillager(world: World, v: Villager, dt: number, bus?: EventBus): void {
+  if (v.carried) {
+    updateMood(v);
+    return;
+  }
+
+  // Needs.
+  const night = isNight(world);
+  const hungerRate =
+    R.needs.hungerPerSecond *
+    (world.weather === 'drought' ? R.weather.droughtHungerMultiplier : 1);
+  v.needs.hunger = clamp01(v.needs.hunger + hungerRate * dt);
+  v.needs.fatigue = clamp01(
+    v.needs.fatigue +
+      (night ? R.needs.fatiguePerSecondNight : R.needs.fatiguePerSecond) * dt,
+  );
+  if (v.blessed > 0) v.blessed = Math.max(0, v.blessed - dt);
+
+  // Panic overrides everything unless sheltered.
+  const sheltered = isSheltered(world, v.pos.x, v.pos.z);
+  if (v.panic > 0) {
+    v.panic -= dt;
+    if (sheltered) v.panic = 0;
+    v.activity = 'panic';
+    v.pos.x += randomRange(world, -1, 1) * R.village.walkSpeed * 1.5 * dt;
+    v.pos.z += randomRange(world, -1, 1) * R.village.walkSpeed * 1.5 * dt;
+    clampToDisc(v.pos, R.village.radius * 0.9);
+    updateMood(v);
+    return;
+  }
+  if (!sheltered && world.phase === 'day') {
+    if (world.weather === 'storm' && random(world) < R.weather.stormPanicChance * dt) {
+      startPanic(world, v, bus);
+      updateMood(v);
+      return;
+    }
+    if (
+      world.weather === 'drought' &&
+      v.needs.hunger > R.weather.droughtPanicHunger &&
+      random(world) < R.weather.stormPanicChance * 0.5 * dt
+    ) {
+      startPanic(world, v, bus);
+      updateMood(v);
+      return;
+    }
+  }
+
+  // Decisions about twice a second, respecting commitment.
+  v.commit -= dt;
+  v.decisionIn -= dt;
+  if (v.decisionIn <= 0) {
+    v.decisionIn = 1 / R.sim.decisionHz + randomRange(world, -0.05, 0.05);
+    // Re-score once the commitment (e.g. from a lift) has run out.
+    if (v.commit <= 0 || world.phase !== 'day') decide(world, v);
+  }
+
+  // Movement then work.
+  if (v.target) {
+    const arrived = stepTowards(v.pos, v.target, R.village.walkSpeed * dt);
+    if (!arrived) {
+      v.activity = 'walk';
+    } else {
+      v.target = null;
+    }
+  }
+  if (!v.target) {
+    if (v.intent === 'idle') v.activity = 'idle';
+    else doWork(world, v, dt, bus);
+  }
+
+  v.beliefs.faith = clamp01(v.beliefs.faith);
+  v.beliefs.initiative = clamp01(v.beliefs.initiative);
+  v.pos.x = clamp(v.pos.x, -R.village.radius, R.village.radius);
+  v.pos.z = clamp(v.pos.z, -R.village.radius, R.village.radius);
+  updateMood(v);
+}

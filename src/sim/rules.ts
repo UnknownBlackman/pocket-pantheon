@@ -65,6 +65,10 @@ export const RULES = {
     dependentInitiative: 0.25,
     /** Baseline idle score, so a contented villager can just wander. */
     idleScore: 0.12,
+    /** Score bonus for the action a villager is already doing (prevents flip-flopping). */
+    stickiness: 0.2,
+    /** Chance per decision that a contented idle villager wanders somewhere new. */
+    wanderChance: 0.15,
     /** Seconds a villager commits to an action before re-scoring. */
     minCommitSeconds: 3,
     /** Seconds of commitment after the player drops a villager on a job. */
@@ -129,7 +133,7 @@ export const RULES = {
 
   weather: {
     /** Probability per second during a storm that an unsheltered villager panics. */
-    stormPanicChance: 0.15,
+    stormPanicChance: 0.05,
     /** Seconds a panic lasts. */
     panicSeconds: 3,
     /** During drought, hunger grows this much faster (thirst). */
