@@ -29,6 +29,20 @@
   grab/release to `liftVillager`/`dropVillager`, shows a gold drop marker over a
   valid job and plays procedural squeal/plop sounds (`src/audio/sfx.ts`).
 
+- Gestures (`src/xr/gestures.ts`) use the knuckle (phalanx-proximal) joints:
+  a finger is extended when its tip reaches >= 4 cm further from the wrist
+  than its knuckle, curled when < 1.5 cm. Scale-free across hand sizes.
+- Rain holds watered fields at full water for the 30 s the cloud lasts; after
+  that they drain at the weather's normal rate. `rainWaterDrainPerSecond`
+  is kept in rules.ts but not used yet.
+- Gaze bubble uses head direction (the design's fallback). IWSDK's
+  `GazeSystem` (enabled by the `gazeTracking` XR feature) turns the input
+  model into gaze+pinch and disables hand rays, which could fight
+  pinch-to-lift; try it on a headset with eye tracking before switching.
+- Spatial UI uses canvas-texture panels (`src/ui/canvas-panel.ts`). The
+  UIKit welcome panel rendered in the browser view but not inside the
+  emulated XR session during the Day 5 check; it now stays browser-only.
+
 ## Known issues / todo
 
 - Day 1 deploy to GitHub Pages or Vercel not done yet: it needs the owner's
@@ -46,3 +60,7 @@
 - Placement confirm: pinching the air must not fire by accident while dragging
   the ring.
 - Hint panel readable at ~50 cm and inside the central view.
+- Poke-hold: does the index tip reliably come within 4 cm of a 4 cm
+  villager without the hand's grab pinch firing?
+- Palm-down Rain/Shelter: thresholds (palm normal dot < -0.7, 5-30 cm
+  above the table, palm speed < 0.15 m/s) need tuning on real hands.
