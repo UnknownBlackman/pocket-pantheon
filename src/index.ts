@@ -12,6 +12,7 @@ import { LiftSystem } from './ecs/lift-system.js';
 import { PlacementSystem } from './ecs/placement-system.js';
 import { SimSystem } from './ecs/sim-system.js';
 import { SyncSystem } from './ecs/sync-system.js';
+import { UISystem } from './ecs/ui-system.js';
 import { buildVillage } from './ecs/village-builder.js';
 import { PanelSystem } from './panel.js';
 
@@ -29,6 +30,7 @@ World.create(
     .registerSystem(AnimationSystem, { priority: P.animation })
     .registerSystem(EffectsSystem, { priority: P.effects })
     .registerSystem(GazeBubbleSystem, { priority: P.ui })
+    .registerSystem(UISystem, { priority: P.ui })
     .registerSystem(PanelSystem, { priority: P.ui });
 
   // The village root starts hidden; PlacementSystem plants it on the table

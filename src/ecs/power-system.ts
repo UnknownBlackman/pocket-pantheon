@@ -190,6 +190,9 @@ export class PowerSystem extends createSystem({
     } else {
       buzz();
       if (ring) setRingProgress(ring, 1, FAIL_COLOR);
+      const kind = mode === 'rain' ? 'rain' : 'shelter';
+      const need = kind === 'rain' ? RULES.powers.rainCost : RULES.powers.shelterCost;
+      events.emit('power.failed', { kind, need, have: sim.favor });
       console.info(`[power] ${mode} needs more Favor, have ${sim.favor.toFixed(1)}`);
     }
   }
@@ -296,6 +299,7 @@ export class PowerSystem extends createSystem({
     } else {
       buzz();
       state.failFlash = 0.8;
+      events.emit('power.failed', { kind: 'bless', need: RULES.powers.blessCost, have: sim.favor });
       console.info(`[power] bless needs ${RULES.powers.blessCost} Favor, have ${sim.favor.toFixed(1)}`);
     }
   }

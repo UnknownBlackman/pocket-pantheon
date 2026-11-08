@@ -23,6 +23,7 @@ import { makeGhost, makeReticle } from '../art/ghost.ts';
 import { events } from '../core/events.ts';
 import { LAYOUT } from '../sim/rules.ts';
 import { setHintPanel } from '../ui/hint-panel.ts';
+import { uiState } from '../ui/ui-state.ts';
 import {
   fallbackPosition,
   isTableHeight,
@@ -106,6 +107,7 @@ export class PlacementSystem extends createSystem({
     this.state = 'idle';
     game.placementSource = 'fallback';
     game.stage = 'playing';
+    uiState.placing = false;
     setHintPanel(this.world, 'welcome');
   }
 
@@ -123,7 +125,9 @@ export class PlacementSystem extends createSystem({
     this.pinching.left = this.pinching.right = false;
     this.dragged.left = this.dragged.right = false;
     this.ensureReticle();
-    setHintPanel(this.world, 'placing');
+    // In XR the canvas hint panel (UISystem) explains placement.
+    setHintPanel(this.world, 'hidden');
+    uiState.placing = true;
   }
 
   private ensureReticle(): void {
@@ -169,7 +173,9 @@ export class PlacementSystem extends createSystem({
 
     if (this.source !== 'none') {
       ghostObj.visible = true;
-      setHintPanel(this.world, 'placing', ghostObj.position, this.headPosition(this.tmpB));
+      uiState.anchor.x = ghostObj.position.x;
+      uiState.anchor.y = ghostObj.position.y;
+      uiState.anchor.z = ghostObj.position.z;
     }
 
     // Pinch the air (not the ring) to confirm.
@@ -319,6 +325,7 @@ export class PlacementSystem extends createSystem({
     this.state = 'confirmed';
     game.placementSource = source;
     game.stage = 'playing';
+    uiState.placing = false;
     setHintPanel(this.world, 'hidden');
     console.info(`[placement] village placed using ${source}`);
     events.emit('village.placed', { source });

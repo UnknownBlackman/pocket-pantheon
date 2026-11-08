@@ -112,6 +112,8 @@ export interface World {
   stats: DayStats;
   /** Totals over the whole save, for milestones like "first harvest". */
   totals: { harvests: number; prayers: number; storms: number };
+  /** Tutorial steps the player has completed (see sim/tutorial.ts). */
+  tutorialDone: string[];
   /** Beliefs at the start of the session, for the dusk summary. */
   sessionStart: { faith: number; initiative: number };
   lastSavedAt: number; // epoch ms

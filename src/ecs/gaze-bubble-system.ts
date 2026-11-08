@@ -6,6 +6,7 @@
  */
 import { createSystem, Quaternion, Vector3 } from '@iwsdk/core';
 import type { Entity } from '@iwsdk/core';
+import { events } from '../core/events.ts';
 import { isDependent } from '../sim/villager.ts';
 import { GESTURES } from '../sim/rules.ts';
 import { CanvasPanel, drawBar, UI_COLORS, UI_FONT } from '../ui/canvas-panel.ts';
@@ -86,6 +87,8 @@ export class GazeBubbleSystem extends createSystem({
     if (best >= 0 && this.dwell >= GESTURES.gazeDwellSeconds && best !== this.shown) {
       this.shown = best;
       this.redrawIn = 0;
+      const v = game.sim.villagers[best];
+      if (v) events.emit('villager.inspected', { villagerId: v.id });
     }
     if (this.shown >= 0 && best !== this.shown) {
       this.linger += delta;

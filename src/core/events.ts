@@ -17,6 +17,10 @@ export interface GameEvents {
   'chronicle.added': { index: number; text: string };
   'session.dusk': { dayIndex: number };
   'village.placed': { source: 'plane' | 'hit-test' | 'fallback' };
+  'villager.inspected': { villagerId: string };
+  'power.failed': { kind: 'bless' | 'rain' | 'shelter'; need: number; have: number };
+  'tutorial.completed': { step: string };
+  'session.paused': { paused: boolean };
 }
 
 export type GameEventName = keyof GameEvents;

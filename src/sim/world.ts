@@ -97,6 +97,7 @@ export function createWorld(seed = 1): World {
     chronicle: [],
     stats: freshStats(),
     totals: { harvests: 0, prayers: 0, storms: 0 },
+    tutorialDone: [],
     sessionStart: { faith: R.beliefs.startFaith, initiative: R.beliefs.startInitiative },
     lastSavedAt: 0,
   };
