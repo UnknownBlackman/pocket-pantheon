@@ -17,6 +17,7 @@ import {
   createField,
   createHut,
   createShrine,
+  createTablet,
   createVillager,
 } from '../scene-assets/village.scene-asset.js';
 import { PALETTE } from '../scene-assets/village-materials.js';
@@ -34,6 +35,12 @@ function cloneOf(key: string, factory: Factory): Group {
 }
 
 export const makeDiorama = (): Group => cloneOf('diorama', createDiorama);
+
+export function makeTablet(): Group {
+  const g = cloneOf('tablet', createTablet);
+  g.add(makeBlobShadow(0.07));
+  return g;
+}
 
 export function makeVillager(index: number): Group {
   const g = cloneOf('villager', createVillager);

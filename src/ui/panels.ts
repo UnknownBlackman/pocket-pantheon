@@ -57,3 +57,95 @@ export function drawPause(panel: CanvasPanel, buttons: readonly PanelButton[], h
   drawButtons(panel, buttons, hot);
   panel.commit();
 }
+
+function star(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, filled: boolean): void {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 === 0 ? r : r * 0.45;
+    const x = cx + Math.cos(a) * rr;
+    const y = cy + Math.sin(a) * rr;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  if (filled) {
+    ctx.fillStyle = UI_COLORS.faith;
+    ctx.fill();
+  } else {
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = UI_COLORS.dim;
+    ctx.stroke();
+  }
+}
+
+export interface DuskSummary {
+  day: number;
+  stars: number;
+  faith: number;
+  faithDelta: number;
+  initiative: number;
+  initiativeDelta: number;
+  leaning: string;
+  entries: string[];
+}
+
+function signed(n: number): string {
+  const pct = Math.round(n * 100);
+  return pct > 0 ? `+${pct}` : `${pct}`;
+}
+
+/** Dusk card: stars, belief changes, this session's chronicle, optional button. */
+export function drawDusk(
+  panel: CanvasPanel,
+  d: DuskSummary,
+  buttons: readonly PanelButton[],
+  hot: string | null,
+): void {
+  const ctx = panel.begin();
+  const w = panel.widthPx;
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = UI_COLORS.title;
+  ctx.font = `700 46px ${UI_FONT}`;
+  ctx.fillText(`Dusk of day ${d.day}`, 36, 72);
+  for (let i = 0; i < 5; i++) star(ctx, w - 230 + i * 44, 56, 18, i < d.stars);
+
+  ctx.font = `600 30px ${UI_FONT}`;
+  ctx.fillStyle = UI_COLORS.faith;
+  ctx.fillText(`Faith ${Math.round(d.faith * 100)} (${signed(d.faithDelta)})`, 36, 124);
+  ctx.fillStyle = UI_COLORS.initiative;
+  ctx.fillText(`Initiative ${Math.round(d.initiative * 100)} (${signed(d.initiativeDelta)})`, 360, 124);
+  ctx.fillStyle = UI_COLORS.text;
+  ctx.font = `500 28px ${UI_FONT}`;
+  let y = wrapText(ctx, d.leaning, 36, 168, w - 72, 34, 2) + 8;
+
+  ctx.fillStyle = UI_COLORS.dim;
+  ctx.font = `500 24px ${UI_FONT}`;
+  const bottom = buttons.length ? buttons[0].y - 16 : panel.heightPx - 30;
+  for (const e of d.entries) {
+    if (y > bottom - 30) break;
+    y = wrapText(ctx, e, 36, y, w - 72, 30, 2) + 4;
+  }
+  drawButtons(panel, buttons, hot);
+  panel.commit();
+}
+
+/** Chronicle card for the stone tablet: newest entries first. */
+export function drawChronicle(panel: CanvasPanel, entries: string[]): void {
+  const ctx = panel.begin();
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = UI_COLORS.title;
+  ctx.font = `700 44px ${UI_FONT}`;
+  ctx.fillText('The Chronicle', 36, 70);
+  ctx.fillStyle = UI_COLORS.text;
+  ctx.font = `500 26px ${UI_FONT}`;
+  let y = 116;
+  for (const e of entries) {
+    if (y > panel.heightPx - 40) break;
+    y = wrapText(ctx, e, 36, y, panel.widthPx - 72, 32, 3) + 6;
+  }
+  ctx.fillStyle = UI_COLORS.dim;
+  ctx.font = `500 22px ${UI_FONT}`;
+  ctx.fillText('Poke the tablet again to close.', 36, panel.heightPx - 26);
+  panel.commit();
+}

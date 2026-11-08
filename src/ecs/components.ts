@@ -45,5 +45,8 @@ export const PowerEffect = createComponent('PowerEffect', {
   radius: { type: Types.Float32, default: 0.05 },
 });
 
+/** The chronicle stone tablet beside the shrine. */
+export const ChronicleTablet = createComponent('ChronicleTablet', {});
+
 /** The row of Favor gems on the diorama rim. */
 export const FavorPips = createComponent('FavorPips', {});

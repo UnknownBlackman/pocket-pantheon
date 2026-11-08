@@ -20,6 +20,7 @@ import { atChestHeight, isPalmFacing } from '../xr/gestures.ts';
 import { hands } from '../xr/hand-state.ts';
 import {
   BuildingView,
+  ChronicleTablet,
   DioramaView,
   FavorPips,
   PowerEffect,
@@ -48,6 +49,7 @@ export class UISystem extends createSystem({
   dioramas: { required: [DioramaView] },
   pips: { required: [FavorPips] },
   effects: { required: [PowerEffect] },
+  tablets: { required: [ChronicleTablet] },
 }) {
   private hint!: CanvasPanel;
   private pause!: CanvasPanel;
@@ -297,6 +299,7 @@ export class UISystem extends createSystem({
       this.queries.dioramas,
       this.queries.pips,
       this.queries.effects,
+      this.queries.tablets,
     ];
     for (const q of qs) for (const e of q.entities) views.push(e);
     resetVillage(this.world, root, views);

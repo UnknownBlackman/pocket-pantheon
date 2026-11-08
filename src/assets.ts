@@ -6,6 +6,7 @@ import {
   createField,
   createHut,
   createShrine,
+  createTablet,
   createVillager,
 } from './scene-assets/village.scene-asset.js';
 
@@ -26,5 +27,6 @@ export default defineAssets({
   hut: createHut(),
   shrine: createShrine(),
   campfire: createCampfire(),
+  tablet: createTablet(),
   'welcome-panel': uikitml('welcome.uikitml', 'Welcome Panel'),
 });

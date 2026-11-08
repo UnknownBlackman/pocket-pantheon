@@ -114,6 +114,8 @@ export interface World {
   totals: { harvests: number; prayers: number; storms: number };
   /** Tutorial steps the player has completed (see sim/tutorial.ts). */
   tutorialDone: string[];
+  /** Index of the first chronicle entry of the current session. */
+  sessionChronicleStart: number;
   /** Beliefs at the start of the session, for the dusk summary. */
   sessionStart: { faith: number; initiative: number };
   lastSavedAt: number; // epoch ms

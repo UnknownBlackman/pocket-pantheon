@@ -23,7 +23,8 @@ import { makeGhost, makeReticle } from '../art/ghost.ts';
 import { events } from '../core/events.ts';
 import { LAYOUT } from '../sim/rules.ts';
 import { setHintPanel } from '../ui/hint-panel.ts';
-import { uiState } from '../ui/ui-state.ts';
+import { showToast, uiState } from '../ui/ui-state.ts';
+import { startSession } from '../sim/world.ts';
 import {
   fallbackPosition,
   isTableHeight,
@@ -322,6 +323,7 @@ export class PlacementSystem extends createSystem({
 
     const source = this.source === 'none' ? 'fallback' : this.source;
     this.tryAnchor(root);
+    this.startOrResumeSession();
     this.state = 'confirmed';
     game.placementSource = source;
     game.stage = 'playing';
@@ -329,6 +331,21 @@ export class PlacementSystem extends createSystem({
     setHintPanel(this.world, 'hidden');
     console.info(`[placement] village placed using ${source}`);
     events.emit('village.placed', { source });
+  }
+
+  /** Coming back: start a new 3-day session if due, and say what changed. */
+  private startOrResumeSession(): void {
+    if (game.newSessionOnPlace) {
+      game.newSessionOnPlace = false;
+      startSession(game.sim, events);
+    }
+    if (game.away) {
+      showToast('While you were away', game.away.summary, 9);
+      game.away = null;
+    } else if (game.returning) {
+      showToast('Welcome back', `Your ${game.sim.villagers.length} villagers remember you.`, 5);
+    }
+    game.returning = false;
   }
 
   private tryAnchor(root: Entity): void {

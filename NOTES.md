@@ -43,6 +43,17 @@
   UIKit welcome panel rendered in the browser view but not inside the
   emulated XR session during the Day 5 check; it now stays browser-only.
 
+- Save: the whole World as JSON under `tabletop-gods-save-v1`, written at
+  dusk, on pause, on page hide/close, when the XR session blurs, and every
+  20 s while playing (a safety net beyond the design's list). A save older
+  than 10 minutes is fast-forwarded one coarse game day per real hour (max 8)
+  and a "While you were away" note shows when the village is placed. A
+  finished session or a long absence starts a new 3-day session on placement.
+- Restart (pause > New village) keeps tutorial progress.
+- The chronicle tablet beside the shrine opens a panel of the last 10
+  entries when poked; the dusk panel shows the current session's entries.
+- Line endings are LF (`.gitattributes`).
+
 ## Known issues / todo
 
 - Day 1 deploy to GitHub Pages or Vercel not done yet: it needs the owner's

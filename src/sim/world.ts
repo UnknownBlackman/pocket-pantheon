@@ -98,6 +98,7 @@ export function createWorld(seed = 1): World {
     stats: freshStats(),
     totals: { harvests: 0, prayers: 0, storms: 0 },
     tutorialDone: [],
+    sessionChronicleStart: 0,
     sessionStart: { faith: R.beliefs.startFaith, initiative: R.beliefs.startInitiative },
     lastSavedAt: 0,
   };
@@ -209,6 +210,7 @@ function startDusk(world: World, bus?: EventBus): void {
 export function startSession(world: World, bus?: EventBus): void {
   world.session += 1;
   world.sessionDay = 0;
+  world.sessionChronicleStart = world.chronicle.length;
   world.phase = 'day';
   world.phaseTime = 0;
   const avg = averageBeliefs(world);

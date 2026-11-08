@@ -5,16 +5,24 @@
 import { OneHandGrabbable } from '@iwsdk/core';
 import type { Entity, World } from '@iwsdk/core';
 import { makeFavorPips } from '../art/effects-art.ts';
-import { makeBuilding, makeDiorama, makeVillager } from '../art/village-art.ts';
+import { makeBuilding, makeDiorama, makeTablet, makeVillager } from '../art/village-art.ts';
 import { LAYOUT } from '../sim/rules.ts';
 import type { World as SimWorld } from '../sim/types.ts';
-import { BuildingView, DioramaView, FavorPips, VillagerView } from './components.ts';
+import { BuildingView, ChronicleTablet, DioramaView, FavorPips, VillagerView } from './components.ts';
+
+/** Where the chronicle tablet stands, beside the shrine (village space). */
+export const TABLET_POS = { x: 0.095, z: -0.2 } as const;
 
 export function buildVillage(world: World, root: Entity, sim: SimWorld): void {
   const diorama = world.createTransformEntity(makeDiorama(), { parent: root });
   diorama.addComponent(DioramaView);
   const pips = world.createTransformEntity(makeFavorPips(), { parent: root });
   pips.addComponent(FavorPips);
+  const tabletObj = makeTablet();
+  tabletObj.position.set(TABLET_POS.x, LAYOUT.baseHeight, TABLET_POS.z);
+  tabletObj.rotation.y = Math.atan2(-TABLET_POS.x, -TABLET_POS.z);
+  const tablet = world.createTransformEntity(tabletObj, { parent: root });
+  tablet.addComponent(ChronicleTablet);
 
   sim.buildings.forEach((b, i) => {
     const obj = makeBuilding(b.kind);

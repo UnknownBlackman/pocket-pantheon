@@ -187,3 +187,35 @@ export function createCampfire(): Group {
   root.add(flame);
   return root;
 }
+
+/**
+ * A 9 cm stone tablet with carved lines, standing on a low plinth; its face
+ * is +Z. Poking it opens the chronicle of past sessions.
+ */
+export function createTablet(): Group {
+  const root = new Group();
+  root.name = 'Tablet';
+
+  const plinth = part('Plinth', new BoxGeometry(0.06, 0.008, 0.026), PALETTE.stoneDark);
+  plinth.position.y = 0.004;
+  root.add(plinth);
+
+  const slab = part('Slab', new BoxGeometry(0.05, 0.075, 0.012), PALETTE.stone);
+  slab.position.y = 0.008 + 0.0375;
+  slab.rotation.x = -0.08; // leans back slightly
+  root.add(slab);
+
+  const lineGeo = new BoxGeometry(0.034, 0.003, 0.002);
+  const lines = new Group();
+  lines.name = 'Carving';
+  lines.position.set(0, 0.008 + 0.0375, 0.0062);
+  lines.rotation.x = -0.08;
+  for (let i = 0; i < 5; i++) {
+    const line = part(`Line${i}`, lineGeo, PALETTE.stoneDark);
+    line.position.y = 0.024 - i * 0.012;
+    line.scale.x = i === 4 ? 0.6 : 1;
+    lines.add(line);
+  }
+  root.add(lines);
+  return root;
+}

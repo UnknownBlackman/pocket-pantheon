@@ -1,6 +1,7 @@
 import { defineComponents } from '@iwsdk/core';
 import {
   BuildingView,
+  ChronicleTablet,
   DioramaView,
   FavorPips,
   PowerEffect,
@@ -15,4 +16,5 @@ export default defineComponents([
   DioramaView,
   PowerEffect,
   FavorPips,
+  ChronicleTablet,
 ]);
