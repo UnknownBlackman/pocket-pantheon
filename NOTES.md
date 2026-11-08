@@ -54,7 +54,37 @@
   entries when poked; the dusk panel shows the current session's entries.
 - Line endings are LF (`.gitattributes`).
 
+## Emulator check after Day 9 (IWER, Quest 3 profile, hands)
+
+Verified from runtime logs and screenshots:
+- Flat browser view: village renders, welcome panel with Enter XR.
+- XR placement: no reachable table in the emulated room, so the fallback
+  platform was used; ghost ring plus the canvas hint panel showed; an air
+  pinch planted and anchored the village.
+- Tutorial hint 'Lift a villager' shown after placement.
+- Lift: pinch, carry and release onto the shrine -> `Bode dropped on
+  shrine0 -> pray`.
+- Bless: pointing hand held on the shrine -> `bless on building 1`.
+- Rain: flat palm down over a field -> `rain at (0.00, 0.19)`.
+- One-hand Shelter fired (see the false-trigger issue below).
+- Dusk panel: stars, Faith/Initiative change, leaning line, chronicle.
+- 'Hand tracking needed' panel appears when input switches to controllers.
+- Save on page hide, load on reload (`loaded village (day 4, session 1)`).
+
+Not yet exercised live (unit-tested where pure): gaze bubble, pause
+gesture and panel buttons, chronicle tablet, two-hand Shelter, the 'Begin
+a new day' button, fast-forward after a long absence.
+
 ## Known issues / todo
+
+- **Palm powers can fire from a hovering hand.** In the emulator the idle
+  hand (relaxed, palm down, ~15 cm above the village) cast Rain and
+  one-hand Shelter by itself. Real hands at rest are usually lower or on the
+  lap, but tune on a headset: options are a stricter flat-hand test, a
+  longer hold, or arming only after the hand enters the band from above.
+- The emulator CLI is slow on this machine (~40 s per call), so a full
+  7-minute session elapses during a few checks; lower the day lengths
+  temporarily when scripting long scenarios.
 
 - Day 1 deploy to GitHub Pages or Vercel not done yet: it needs the owner's
   hosting account. `vite.config.ts` already uses `base: './'`, so a static

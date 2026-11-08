@@ -186,6 +186,7 @@ export class PowerSystem extends createSystem({
       if (mode === 'rain') rainSound();
       else shelterSound();
       this.spawnWeatherEffect(mode === 'rain' ? 'rain' : 'shelter', this.palmX, this.palmZ);
+      console.info(`[power] ${mode} at (${this.palmX.toFixed(2)}, ${this.palmZ.toFixed(2)}); Favor now ${sim.favor.toFixed(1)}`);
       this.palmCooldown = GESTURES.powerCooldownSeconds;
     } else {
       buzz();
@@ -296,6 +297,7 @@ export class PowerSystem extends createSystem({
     if (ok) {
       chime();
       this.spawnSparkles(target.x, target.z);
+      console.info(`[power] bless on ${state.kind} ${state.index}; Favor now ${sim.favor.toFixed(1)}`);
     } else {
       buzz();
       state.failFlash = 0.8;

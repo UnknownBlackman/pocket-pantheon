@@ -36,8 +36,11 @@ export class SaveSystem extends createSystem({}) {
   }
 
   private save(why: string): void {
-    // Nothing worth saving before the first placement of a brand-new village.
-    if (game.stage !== 'playing' && !game.returning) return;
+    // Nothing worth saving until a brand-new village has been played a little
+    // (the flat browser preview does not run the simulation).
+    const sim = game.sim;
+    const played = sim.timeOfDay > 0 || sim.dayIndex > 0 || sim.session > 1;
+    if (!played && !game.returning) return;
     if (saveWorld(browserStorage(), game.sim)) {
       this.sinceSave = 0;
       console.info(`[save] saved (${why})`);

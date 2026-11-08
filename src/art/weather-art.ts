@@ -30,7 +30,7 @@ const domeMat = new MeshBasicMaterial({
 const domeRimMat = new MeshBasicMaterial({ color: 0xffd36b, transparent: true, opacity: 0.8 });
 
 /** Cloud height above the table surface, metres. */
-export const CLOUD_HEIGHT = 0.2;
+export const CLOUD_HEIGHT = 0.14;
 
 function cloud(radius: number, material: MeshStandardMaterial, puffs: number): Group {
   const g = new Group();

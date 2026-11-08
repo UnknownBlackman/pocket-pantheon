@@ -51,7 +51,10 @@ export class LiftSystem extends createSystem({
       this.world.getSystem(GrabSystem)?.forceRelease(e);
       return;
     }
-    if (liftVillager(game.sim, this.simId(e), events)) squeal();
+    if (liftVillager(game.sim, this.simId(e), events)) {
+      squeal();
+      console.info(`[lift] picked up ${this.simId(e)}`);
+    }
     this.ensureMarker();
   }
 
@@ -74,6 +77,7 @@ export class LiftSystem extends createSystem({
     if (!v || !v.carried) return;
     const building = dropVillager(game.sim, v.id, p.x, p.z, events);
     plop(building !== undefined);
+    console.info(`[lift] ${v.name} dropped on ${building ? building.id : 'open ground'} -> ${v.activity}`);
     // Stand upright again; SyncSystem lowers them back onto the table.
     e.object3D?.rotation.set(0, e.object3D.rotation.y, 0);
   }
