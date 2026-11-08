@@ -2,6 +2,7 @@
  * Creates the visible village (diorama, buildings, villagers) as child
  * entities of the VillageRoot entity, mirroring the simulation World.
  */
+import { OneHandGrabbable } from '@iwsdk/core';
 import type { Entity, World } from '@iwsdk/core';
 import { makeBuilding, makeDiorama, makeVillager } from '../art/village-art.ts';
 import { LAYOUT } from '../sim/rules.ts';
@@ -40,5 +41,7 @@ export function spawnVillagerView(world: World, root: Entity, sim: SimWorld, ind
     activity: v.activity,
     activityTime: 0,
   });
+  // Lift power: a hand pinch grabs the villager. Kept upright while carried.
+  e.addComponent(OneHandGrabbable, { rotate: false, translate: true });
   return e;
 }

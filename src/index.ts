@@ -4,6 +4,7 @@ import { VILLAGE_ROOT_NAME, SYSTEM_PRIORITY as P } from './core/constants.js';
 import { AnimationSystem } from './ecs/animation-system.js';
 import { VillageRoot } from './ecs/components.js';
 import { game } from './ecs/game.js';
+import { LiftSystem } from './ecs/lift-system.js';
 import { PlacementSystem } from './ecs/placement-system.js';
 import { SimSystem } from './ecs/sim-system.js';
 import { SyncSystem } from './ecs/sync-system.js';
@@ -17,6 +18,7 @@ World.create(
   world
     .registerSystem(PlacementSystem, { priority: P.placement })
     .registerSystem(SimSystem, { priority: P.sim })
+    .registerSystem(LiftSystem, { priority: P.lift })
     .registerSystem(SyncSystem, { priority: P.sync })
     .registerSystem(AnimationSystem, { priority: P.animation })
     .registerSystem(PanelSystem, { priority: P.ui });
