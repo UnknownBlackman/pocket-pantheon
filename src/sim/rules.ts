@@ -182,6 +182,24 @@ export const GESTURES = {
   shelterOneHandHoldSeconds: 1.5,
   pauseHoldSeconds: 1.0,
   noHandsWarningSeconds: 3,
+  /** Extended: fingertip reaches this much further from the wrist than its knuckle. */
+  fingerExtended: 0.04,
+  /** Curled: fingertip reaches less than this beyond its knuckle (often negative). */
+  fingerCurled: 0.015,
+  /** Palm faces the viewer when its normal points at the head this much (dot). */
+  palmFacingDot: 0.7,
+  /** Pause palms must be between these distances below the eyes (chest height). */
+  pauseMinBelowEye: 0.15,
+  pauseMaxBelowEye: 0.6,
+  /** Extra poke reach around a building's footprint. */
+  buildingPokeRadius: 0.045,
+  /** Head-direction gaze: cone half-angle (deg), dwell and max range. */
+  gazeConeDegrees: 7,
+  gazeDwellSeconds: 0.4,
+  gazeLingerSeconds: 0.3,
+  gazeMaxDistance: 1.5,
+  /** After a power fires, the hand must leave the pose for this long. */
+  powerCooldownSeconds: 0.6,
 } as const;
 
 /** Physical sizes from the scale-and-layout table, metres. */

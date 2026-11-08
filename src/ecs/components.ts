@@ -32,3 +32,18 @@ export const BuildingView = createComponent('BuildingView', {
 
 /** Visual-only diorama base (the round table piece). */
 export const DioramaView = createComponent('DioramaView', {});
+
+/** A transient power effect (sparkles, rain cloud, shelter dome) on the table. */
+export const PowerEffect = createComponent('PowerEffect', {
+  kind: {
+    type: Types.Enum,
+    enum: { Bless: 'bless', Rain: 'rain', Shelter: 'shelter' },
+    default: 'bless',
+  },
+  age: { type: Types.Float32, default: 0 },
+  duration: { type: Types.Float32, default: 1 },
+  radius: { type: Types.Float32, default: 0.05 },
+});
+
+/** The row of Favor gems on the diorama rim. */
+export const FavorPips = createComponent('FavorPips', {});

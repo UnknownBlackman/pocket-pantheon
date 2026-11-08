@@ -75,3 +75,54 @@ export function plop(onJob: boolean): void {
   blip(onJob ? 520 : 300, 0.55, 0.14, 'sine', 0.3);
   if (onJob) setTimeout(() => blip(780, 1.0, 0.12, 'triangle', 0.15), 70);
 }
+
+/** Warm rising chime when a power succeeds. */
+export function chime(): void {
+  blip(660, 1.0, 0.35, 'sine', 0.22);
+  setTimeout(() => blip(880, 1.0, 0.35, 'sine', 0.18), 80);
+  setTimeout(() => blip(1320, 1.0, 0.45, 'sine', 0.12), 160);
+}
+
+/** Low buzz when there is not enough Favor. */
+export function buzz(): void {
+  blip(150, 0.9, 0.25, 'square', 0.08);
+}
+
+/** Soft tick while a hold is charging (call sparingly). */
+export function tick(): void {
+  blip(1400, 1.0, 0.03, 'sine', 0.04);
+}
+
+/** Rain: a burst of filtered noise. */
+export function rainSound(): void {
+  noise(1.6, 900, 0.18);
+}
+
+/** Shelter: a deep hum that swells. */
+export function shelterSound(): void {
+  blip(110, 1.5, 0.9, 'sine', 0.25);
+  setTimeout(() => blip(220, 1.2, 0.7, 'triangle', 0.1), 120);
+}
+
+function noise(duration: number, cutoff: number, volume: number): void {
+  if (muted) return;
+  const ac = audio();
+  if (!ac || !master) return;
+  try {
+    const len = Math.floor(ac.sampleRate * duration);
+    const buffer = ac.createBuffer(1, len, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = ac.createBufferSource();
+    src.buffer = buffer;
+    const filter = ac.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = cutoff;
+    const gain = ac.createGain();
+    gain.gain.value = volume;
+    src.connect(filter).connect(gain).connect(master);
+    src.start();
+  } catch {
+    /* ignore */
+  }
+}

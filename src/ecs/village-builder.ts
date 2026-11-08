@@ -4,14 +4,17 @@
  */
 import { OneHandGrabbable } from '@iwsdk/core';
 import type { Entity, World } from '@iwsdk/core';
+import { makeFavorPips } from '../art/effects-art.ts';
 import { makeBuilding, makeDiorama, makeVillager } from '../art/village-art.ts';
 import { LAYOUT } from '../sim/rules.ts';
 import type { World as SimWorld } from '../sim/types.ts';
-import { BuildingView, DioramaView, VillagerView } from './components.ts';
+import { BuildingView, DioramaView, FavorPips, VillagerView } from './components.ts';
 
 export function buildVillage(world: World, root: Entity, sim: SimWorld): void {
   const diorama = world.createTransformEntity(makeDiorama(), { parent: root });
   diorama.addComponent(DioramaView);
+  const pips = world.createTransformEntity(makeFavorPips(), { parent: root });
+  pips.addComponent(FavorPips);
 
   sim.buildings.forEach((b, i) => {
     const obj = makeBuilding(b.kind);

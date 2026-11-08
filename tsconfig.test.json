@@ -9,6 +9,7 @@
     "tests/**/*.ts",
     "src/sim/**/*.ts",
     "src/core/**/*.ts",
-    "src/xr/placement.ts"
+    "src/xr/placement.ts",
+    "src/xr/gestures.ts"
   ]
 }
