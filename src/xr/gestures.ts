@@ -4,7 +4,7 @@
  * recorded or synthetic poses. Joints are a flat Float32Array of 25 * xyz in
  * the standard WebXR XRHand order. Thresholds live in GESTURES (rules.ts).
  */
-import { GESTURES } from '../sim/rules.ts';
+import { GESTURES, WAVE } from '../sim/rules.ts';
 
 export type Handedness = 'left' | 'right';
 export type V3 = { x: number; y: number; z: number };
@@ -154,4 +154,59 @@ export function wristsApartForShelter(a: ArrayLike<number>, b: ArrayLike<number>
 export function atChestHeight(palmY: number, headY: number): boolean {
   const below = headY - palmY;
   return below >= GESTURES.pauseMinBelowEye && below <= GESTURES.pauseMaxBelowEye;
+}
+
+/**
+ * Detects a side-to-side wave from a stream of lateral palm positions (metres
+ * along the head's right axis). A wave is WAVE.reversals direction changes,
+ * each after a swing of at least WAVE.minSwing, within WAVE.windowSeconds.
+ */
+export class WaveDetector {
+  /** 0 = no direction yet, +1 = moving right, -1 = moving left. */
+  private direction = 0;
+  /** First sample (before a direction) or the furthest point of the current swing. */
+  private extreme = 0;
+  private started = false;
+  private time = 0;
+  private reversalTimes: number[] = [];
+
+  /** Feed one sample; returns true on the frame a wave completes. */
+  update(lateral: number, dt: number): boolean {
+    this.time += dt;
+    if (!this.started) {
+      this.started = true;
+      this.extreme = lateral;
+      return false;
+    }
+    if (this.direction === 0) {
+      if (Math.abs(lateral - this.extreme) >= WAVE.minSwing) {
+        this.direction = Math.sign(lateral - this.extreme);
+        this.extreme = lateral;
+      }
+      return false;
+    }
+    const pastExtreme = this.direction > 0 ? lateral > this.extreme : lateral < this.extreme;
+    if (pastExtreme) {
+      this.extreme = lateral;
+    } else if (Math.abs(this.extreme - lateral) >= WAVE.minSwing) {
+      // Swung back far enough: a reversal.
+      this.direction = -this.direction;
+      this.extreme = lateral;
+      this.reversalTimes.push(this.time);
+    }
+    while (this.reversalTimes.length && this.time - this.reversalTimes[0] > WAVE.windowSeconds) {
+      this.reversalTimes.shift();
+    }
+    if (this.reversalTimes.length >= WAVE.reversals) {
+      this.reset();
+      return true;
+    }
+    return false;
+  }
+
+  reset(): void {
+    this.started = false;
+    this.direction = 0;
+    this.reversalTimes.length = 0;
+  }
 }

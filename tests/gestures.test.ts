@@ -93,3 +93,24 @@ describe('two hands', () => {
     assert.ok(!isPalmFacing(away, palmCenter(away, v()), palmNormal(away, 'right', v()), head));
   });
 });
+
+describe('wave', () => {
+  it('a side-to-side wave is detected; a slow drift or tiny jitter is not', async () => {
+    const { WaveDetector } = await import('../src/xr/gestures.ts');
+    const dt = 1 / 60;
+    const wave = new WaveDetector();
+    let waved = false;
+    for (let i = 0; i < 90 && !waved; i++) waved = wave.update(Math.sin(i * dt * Math.PI * 4) * 0.06, dt);
+    assert.ok(waved, 'two full waves per second, 6 cm swing');
+
+    const drift = new WaveDetector();
+    let drifted = false;
+    for (let i = 0; i < 120; i++) drifted ||= drift.update(i * dt * 0.2, dt);
+    assert.ok(!drifted, 'a slow drift is not a wave');
+
+    const jitter = new WaveDetector();
+    let jittered = false;
+    for (let i = 0; i < 120; i++) jittered ||= jitter.update(Math.sin(i) * 0.01, dt);
+    assert.ok(!jittered, 'tracking jitter is not a wave');
+  });
+});

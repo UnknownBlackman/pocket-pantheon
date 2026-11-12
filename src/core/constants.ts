@@ -14,6 +14,7 @@ export const OCCLUSION_MODE = 'SoftOcclusion' as const;
 /** Render priorities for custom systems, in the design's update order. */
 export const SYSTEM_PRIORITY = {
   handGesture: 0,
+  handPresence: 0.5,
   placement: 1,
   power: 2,
   sim: 10,

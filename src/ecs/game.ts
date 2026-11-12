@@ -5,6 +5,8 @@
  */
 import { browserStorage, loadWorld } from '../core/save.ts';
 import type { AwayReport } from '../sim/fastforward.ts';
+import { makePresence } from '../sim/presence.ts';
+import type { GodPresence } from '../sim/presence.ts';
 import { createWorld } from '../sim/world.ts';
 import type { World as SimWorld } from '../sim/types.ts';
 
@@ -23,6 +25,8 @@ export interface GameState {
   away: AwayReport | null;
   /** Start a fresh 3-day session when the village is next placed. */
   newSessionOnPlace: boolean;
+  /** The player's hands and head in village space (filled by HandPresenceSystem). */
+  presence: GodPresence;
 }
 
 function initialState(): GameState {
@@ -39,6 +43,7 @@ function initialState(): GameState {
       away: loaded.away,
       // A finished session, or a long absence, starts a new 3-day session.
       newSessionOnPlace: w.phase !== 'day' || loaded.away !== null,
+      presence: makePresence(),
     };
   }
   return {
@@ -49,6 +54,7 @@ function initialState(): GameState {
     returning: false,
     away: null,
     newSessionOnPlace: false,
+    presence: makePresence(),
   };
 }
 

@@ -5,6 +5,7 @@
 import { createSystem, VisibilityState } from '@iwsdk/core';
 import { events } from '../core/events.ts';
 import { RULES } from '../sim/rules.ts';
+import { updatePresence } from '../sim/presence.ts';
 import { tick } from '../sim/world.ts';
 import { game } from './game.ts';
 
@@ -25,6 +26,7 @@ export class SimSystem extends createSystem({}) {
     }
     this.accumulator += Math.min(delta, MAX_FRAME);
     while (this.accumulator >= STEP) {
+      updatePresence(game.sim, game.presence, STEP, events);
       tick(game.sim, STEP, events);
       this.accumulator -= STEP;
     }
