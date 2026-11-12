@@ -90,6 +90,22 @@ function tunicMaterial(index: number): MeshStandardMaterial {
 
 let blobMaterial: MeshBasicMaterial | undefined;
 let blobGeometry: CircleGeometry | undefined;
+let blobTex: CanvasTexture | undefined;
+
+/** A fresh soft-shadow material (own opacity) sharing the blob texture. */
+export function makeBlobMaterial(): MeshBasicMaterial {
+  blobTex ??= blobTexture();
+  return new MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false });
+}
+
+/** Flat unit-diameter disc lying on the ground, shared by all blob shadows. */
+export function blobDisc(): CircleGeometry {
+  if (!blobGeometry) {
+    blobGeometry = new CircleGeometry(0.5, 16);
+    blobGeometry.rotateX(-Math.PI / 2);
+  }
+  return blobGeometry;
+}
 
 function blobTexture(): CanvasTexture {
   const size = 64;
@@ -107,16 +123,8 @@ function blobTexture(): CanvasTexture {
 
 /** A soft dark disc lying on the ground under an object (no real-time shadows). */
 export function makeBlobShadow(diameter: number): Object3D {
-  if (!blobMaterial) {
-    blobMaterial = new MeshBasicMaterial({
-      map: blobTexture(),
-      transparent: true,
-      depthWrite: false,
-    });
-    blobGeometry = new CircleGeometry(0.5, 16);
-    blobGeometry.rotateX(-Math.PI / 2);
-  }
-  const mesh = new Mesh(blobGeometry, blobMaterial);
+  blobMaterial ??= makeBlobMaterial();
+  const mesh = new Mesh(blobDisc(), blobMaterial);
   mesh.name = 'BlobShadow';
   mesh.scale.setScalar(diameter);
   mesh.position.y = 0.0008;

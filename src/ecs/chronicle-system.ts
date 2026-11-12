@@ -95,6 +95,7 @@ export class ChronicleSystem extends createSystem({
     const entries = sim.chronicle.slice(sim.sessionChronicleStart).slice(-6).map((e) => e.text);
     return {
       day: sim.dayIndex,
+      title: sim.title,
       stars: duskScore(sim).stars,
       faith: avg.faith,
       faithDelta: avg.faith - sim.sessionStart.faith,

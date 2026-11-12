@@ -81,6 +81,8 @@ function star(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, 
 
 export interface DuskSummary {
   day: number;
+  /** What the villagers call the god, e.g. 'the Storm-Caller'. */
+  title: string;
   stars: number;
   faith: number;
   faithDelta: number;
@@ -110,14 +112,18 @@ export function drawDusk(
   ctx.fillText(`Dusk of day ${d.day}`, 36, 72);
   for (let i = 0; i < 5; i++) star(ctx, w - 230 + i * 44, 56, 18, i < d.stars);
 
+  ctx.font = `italic 600 30px ${UI_FONT}`;
+  ctx.fillStyle = UI_COLORS.title;
+  if (d.title) ctx.fillText(`They call you ${d.title}`, 36, 116);
+
   ctx.font = `600 30px ${UI_FONT}`;
   ctx.fillStyle = UI_COLORS.faith;
-  ctx.fillText(`Faith ${Math.round(d.faith * 100)} (${signed(d.faithDelta)})`, 36, 124);
+  ctx.fillText(`Faith ${Math.round(d.faith * 100)} (${signed(d.faithDelta)})`, 36, 162);
   ctx.fillStyle = UI_COLORS.initiative;
-  ctx.fillText(`Initiative ${Math.round(d.initiative * 100)} (${signed(d.initiativeDelta)})`, 360, 124);
+  ctx.fillText(`Initiative ${Math.round(d.initiative * 100)} (${signed(d.initiativeDelta)})`, 360, 162);
   ctx.fillStyle = UI_COLORS.text;
   ctx.font = `500 28px ${UI_FONT}`;
-  let y = wrapText(ctx, d.leaning, 36, 168, w - 72, 34, 2) + 8;
+  let y = wrapText(ctx, d.leaning, 36, 206, w - 72, 34, 2) + 8;
 
   ctx.fillStyle = UI_COLORS.dim;
   ctx.font = `500 24px ${UI_FONT}`;

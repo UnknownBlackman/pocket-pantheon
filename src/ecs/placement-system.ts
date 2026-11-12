@@ -343,7 +343,8 @@ export class PlacementSystem extends createSystem({
       showToast('While you were away', game.away.summary, 9);
       game.away = null;
     } else if (game.returning) {
-      showToast('Welcome back', `Your ${game.sim.villagers.length} villagers remember you.`, 5);
+      const title = game.sim.title ? `, ${game.sim.title}` : '';
+      showToast(`Welcome back${title}`, `Your ${game.sim.villagers.length} villagers remember you.`, 5);
     }
     game.returning = false;
   }

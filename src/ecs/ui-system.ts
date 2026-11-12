@@ -86,6 +86,9 @@ export class UISystem extends createSystem({
       events.on('villager.inspected', () => {
         completeStep(game.sim, 'gaze');
       }),
+      events.on('villager.climbed', () => {
+        completeStep(game.sim, 'ride');
+      }),
       events.on('power.failed', (p) => {
         showToast(
           'Not enough Favor',

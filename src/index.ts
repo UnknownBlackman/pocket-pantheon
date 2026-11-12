@@ -2,10 +2,13 @@ import { DepthSensingSystem, Group, World } from '@iwsdk/core';
 import projectOptions from 'virtual:iwsdk-project';
 import { VILLAGE_ROOT_NAME, SYSTEM_PRIORITY as P } from './core/constants.js';
 import { AnimationSystem } from './ecs/animation-system.js';
+import { AudioSystem } from './ecs/audio-system.js';
 import { ChronicleSystem } from './ecs/chronicle-system.js';
 import { EffectsSystem } from './ecs/effects-system.js';
 import { GazeBubbleSystem } from './ecs/gaze-bubble-system.js';
+import { HandFxSystem } from './ecs/hand-fx-system.js';
 import { HandGestureSystem } from './ecs/hand-gesture-system.js';
+import { HandPresenceSystem } from './ecs/hand-presence-system.js';
 import { PowerSystem } from './ecs/power-system.js';
 import { SaveSystem } from './ecs/save-system.js';
 import { VillageRoot } from './ecs/components.js';
@@ -35,6 +38,7 @@ World.create(
 
   world
     .registerSystem(HandGestureSystem, { priority: P.handGesture })
+    .registerSystem(HandPresenceSystem, { priority: P.handPresence })
     .registerSystem(PlacementSystem, { priority: P.placement })
     .registerSystem(PowerSystem, { priority: P.power })
     .registerSystem(SimSystem, { priority: P.sim })
@@ -42,6 +46,8 @@ World.create(
     .registerSystem(SyncSystem, { priority: P.sync })
     .registerSystem(AnimationSystem, { priority: P.animation })
     .registerSystem(EffectsSystem, { priority: P.effects })
+    .registerSystem(HandFxSystem, { priority: P.effects })
+    .registerSystem(AudioSystem, { priority: P.audio })
     .registerSystem(GazeBubbleSystem, { priority: P.ui })
     .registerSystem(UISystem, { priority: P.ui })
     .registerSystem(ChronicleSystem, { priority: P.ui })

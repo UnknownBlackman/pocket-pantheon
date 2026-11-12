@@ -126,3 +126,28 @@ function noise(duration: number, cutoff: number, volume: number): void {
     /* ignore */
   }
 }
+
+/** Tiny giggle: a villager found a hiding spot. */
+export function giggle(): void {
+  blip(1250 + Math.random() * 200, 1.15, 0.06, 'triangle', 0.08);
+  setTimeout(() => blip(1350 + Math.random() * 200, 1.1, 0.06, 'triangle', 0.07), 80);
+  setTimeout(() => blip(1450 + Math.random() * 200, 1.05, 0.06, 'triangle', 0.06), 160);
+}
+
+/** A little crowd cheer: hide-and-seek found, or waving back. */
+export function cheer(): void {
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => blip(700 + Math.random() * 500, 1.3, 0.16, 'triangle', 0.07), i * 45);
+  }
+}
+
+/** A hop onto the god's palm. */
+export function hop(): void {
+  blip(600, 1.6, 0.09, 'sine', 0.14);
+}
+
+/** Falling off: a descending squeal (hard) or a soft drop. */
+export function tumble(hard: boolean): void {
+  if (hard) blip(1000, 0.35, 0.4, 'triangle', 0.18);
+  else blip(500, 0.7, 0.15, 'sine', 0.12);
+}

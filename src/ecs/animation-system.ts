@@ -80,6 +80,56 @@ export class AnimationSystem extends createSystem({
             sx = 2 - sy;
             break;
           }
+          case 'awe':
+            // Lean back to stare up at the god's hand, trembling a little.
+            rx = -0.45 * ease;
+            sy = 1.04;
+            sx = 0.98;
+            rz = Math.sin(t * 23) * 0.03;
+            break;
+          case 'wave':
+            // Sway side to side and bounce: waving back with the whole body.
+            rz = Math.sin(t * 10) * 0.3;
+            rx = -0.2;
+            y = Math.abs(Math.sin(t * 10)) * 0.003;
+            break;
+          case 'daze':
+            // Dizzy wobble after a fall.
+            rz = Math.sin(t * 6) * 0.3;
+            rx = Math.cos(t * 6) * 0.15;
+            sy = 0.9;
+            sx = 1.05;
+            break;
+          case 'climb': {
+            // Eager little hops towards the open palm.
+            const s = Math.sin(t * 16);
+            y = Math.abs(s) * 0.007;
+            sy = 1 + Math.sin(t * 32) * 0.06;
+            sx = 2 - sy;
+            rx = -0.15;
+            break;
+          }
+          case 'ride':
+            // Sitting on the palm, swaying with the hand.
+            sy = 0.78;
+            sx = 1.1;
+            rx = -0.1 + Math.sin(t * 2.5) * 0.06;
+            rz = Math.sin(t * 1.7) * 0.08;
+            break;
+          case 'fall':
+            // Head-over-heels tumble.
+            rx = at * 14;
+            rz = Math.sin(at * 9) * 0.6;
+            break;
+          case 'hide': {
+            // Crouch behind the god's hand and peek out now and then.
+            sy = 0.72;
+            sx = 1.08;
+            const peek = Math.sin(t * 1.3);
+            rz = peek > 0.55 ? (peek - 0.55) * 1.6 : 0;
+            jx = peek > 0.55 ? 0.003 : 0;
+            break;
+          }
           default: {
             // Idle: gentle breathing. Dependent villagers slump and wait.
             const dependent = v.beliefs.initiative < RULES.decisions.dependentInitiative;
@@ -88,6 +138,8 @@ export class AnimationSystem extends createSystem({
               rx = 0.4 * ease;
               sy -= 0.08 * ease;
             }
+            // The god leans close: everyone looks up.
+            if (game.presence.headNear) rx = -0.3 * ease;
             sx = 2 - sy;
           }
         }

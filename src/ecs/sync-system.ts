@@ -6,12 +6,14 @@
 import { createSystem, Grabbed } from '@iwsdk/core';
 import type { Material, Mesh } from '@iwsdk/core';
 import { PALETTE } from '../scene-assets/village-materials.ts';
-import { LAYOUT, RULES } from '../sim/rules.ts';
+import { LAYOUT, PRESENCE, RULES } from '../sim/rules.ts';
 import type { Building, World as SimWorld } from '../sim/types.ts';
 import { BuildingView, VillagerView } from './components.ts';
 import { game } from './game.ts';
 
 const TWO_PI = Math.PI * 2;
+/** Riders sit this far above the palm centre (the palm's thickness). */
+const RIDE_SEAT = 0.012;
 
 function findBuilding(sim: SimWorld, id: string | null): Building | undefined {
   if (id === null) return undefined;
@@ -46,16 +48,46 @@ export class SyncSystem extends createSystem({
       const v = sim.villagers[index];
       if (!obj || !v) continue;
 
-      const px = obj.position.x;
-      const pz = obj.position.z;
-      obj.position.x += (v.pos.x - px) * posK;
-      obj.position.z += (v.pos.z - pz) * posK;
-      obj.position.y += (LAYOUT.baseHeight - obj.position.y) * posK;
+      const p = game.presence;
+      if (v.ride === 'ride' && v.rideHand && p.hands[v.rideHand].present) {
+        // Sitting on the god's palm: stick to the live hand, not the 10 Hz sim.
+        const h = p.hands[v.rideHand];
+        const k = Math.min(1, posK * 3);
+        obj.position.x += (h.x + v.rideX - obj.position.x) * k;
+        obj.position.z += (h.z + v.rideZ - obj.position.z) * k;
+        obj.position.y += (LAYOUT.baseHeight + h.y + RIDE_SEAT - obj.position.y) * k;
+      } else if (v.ride === 'fall') {
+        // Tumbling from the palm height to the table.
+        const t = Math.min(1, v.rideTime / PRESENCE.fallSeconds);
+        obj.position.x += (v.pos.x - obj.position.x) * posK;
+        obj.position.z += (v.pos.z - obj.position.z) * posK;
+        obj.position.y = LAYOUT.baseHeight + Math.max(0, (v.rideY + RIDE_SEAT) * (1 - t * t));
+      } else {
+        const px = obj.position.x;
+        const pz = obj.position.z;
+        obj.position.x += (v.pos.x - px) * posK;
+        obj.position.z += (v.pos.z - pz) * posK;
+        obj.position.y += (LAYOUT.baseHeight - obj.position.y) * posK;
+      }
 
-      // Face the way they walk, or the building they work at.
+      // Face the way they walk, the building they work at, or the god.
       let fx = 0;
       let fz = 0;
-      if (v.activity === 'walk' && v.target) {
+      const facesGod =
+        p.headPresent &&
+        (v.activity === 'awe' ||
+          v.activity === 'wave' ||
+          v.activity === 'ride' ||
+          v.activity === 'daze' ||
+          (v.activity === 'cheer' && v.reaction === 'cheer') ||
+          (p.headNear && v.activity === 'idle'));
+      if (facesGod) {
+        fx = p.head.x - obj.position.x;
+        fz = p.head.z - obj.position.z;
+      } else if (v.activity === 'climb' && v.rideHand && p.hands[v.rideHand].present) {
+        fx = p.hands[v.rideHand].x - obj.position.x;
+        fz = p.hands[v.rideHand].z - obj.position.z;
+      } else if (v.activity === 'walk' && v.target) {
         fx = v.target.x - v.pos.x;
         fz = v.target.z - v.pos.z;
       } else if (v.activity === 'cheer' || v.activity === 'pray' || v.activity === 'farm') {

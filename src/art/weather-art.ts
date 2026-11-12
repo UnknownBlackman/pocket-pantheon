@@ -98,3 +98,21 @@ export function makeShelterDome(radius: number): Group {
   g.add(rim);
   return g;
 }
+
+const splashGeo = new SphereGeometry(0.004, 6, 3);
+const splashMat = new MeshBasicMaterial({ color: 0xdff3ff, transparent: true, opacity: 0.85 });
+
+/** A pool of tiny splash droplets for rain hitting the god's hand. */
+export function makeSplashPool(count: number): Group {
+  const g = new Group();
+  g.name = 'HandSplashes';
+  for (let i = 0; i < count; i++) {
+    const s = new Mesh(splashGeo, splashMat);
+    s.name = 'Splash';
+    s.visible = false;
+    s.userData.age = 1;
+    s.renderOrder = 6;
+    g.add(s);
+  }
+  return g;
+}
