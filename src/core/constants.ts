@@ -5,6 +5,12 @@ export const APP_NAME = 'Tabletop Gods';
 /** Name given to the Object3D of the village root, for runtime inspection. */
 export const VILLAGE_ROOT_NAME = 'VillageRoot';
 
+/**
+ * Depth occlusion mode for village meshes: soft (13-tap blur) reads best
+ * around fingers. Switch to 'HardOcclusion' if the headset frame rate suffers.
+ */
+export const OCCLUSION_MODE = 'SoftOcclusion' as const;
+
 /** Render priorities for custom systems, in the design's update order. */
 export const SYSTEM_PRIORITY = {
   handGesture: 0,

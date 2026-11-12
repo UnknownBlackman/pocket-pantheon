@@ -21,6 +21,7 @@ import { hands, HANDEDNESS } from '../xr/hand-state.ts';
 import type { HandData } from '../xr/hand-state.ts';
 import { BuildingView, PowerEffect, VillageRoot, VillagerView } from './components.ts';
 import { game } from './game.ts';
+import { makeOccludable } from './occlusion.ts';
 
 const BLESS_COLOR = 0xffd36b;
 const RAIN_COLOR = 0x6cc4ff;
@@ -219,6 +220,7 @@ export class PowerSystem extends createSystem({
       duration: kind === 'rain' ? RULES.powers.rainSeconds : RULES.powers.shelterSeconds,
       radius: kind === 'rain' ? RULES.powers.rainRadius : RULES.powers.shelterRadius,
     });
+    makeOccludable(e);
   }
 
   private resetPoke(state: PokeState): void {
@@ -313,5 +315,6 @@ export class PowerSystem extends createSystem({
     obj.position.set(x, LAYOUT.baseHeight, z);
     const e = this.world.createTransformEntity(obj, { parent: root });
     e.addComponent(PowerEffect, { kind: 'bless', age: 0, duration: 1.4, radius: 0.03 });
+    makeOccludable(e);
   }
 }

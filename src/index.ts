@@ -1,4 +1,4 @@
-import { Group, World } from '@iwsdk/core';
+import { DepthSensingSystem, Group, World } from '@iwsdk/core';
 import projectOptions from 'virtual:iwsdk-project';
 import { VILLAGE_ROOT_NAME, SYSTEM_PRIORITY as P } from './core/constants.js';
 import { AnimationSystem } from './ecs/animation-system.js';
@@ -22,6 +22,17 @@ World.create(
   document.getElementById('scene-container') as HTMLDivElement,
   projectOptions,
 ).then((world) => {
+  // Real hands and objects hide the village behind them (passthrough depth).
+  // Depth is requested as optional, so sessions without it still run.
+  world.registerSystem(DepthSensingSystem, {
+    configData: {
+      enableDepthTexture: true,
+      enableOcclusion: true,
+      useFloat32: true,
+      blurRadius: 20,
+    },
+  });
+
   world
     .registerSystem(HandGestureSystem, { priority: P.handGesture })
     .registerSystem(PlacementSystem, { priority: P.placement })

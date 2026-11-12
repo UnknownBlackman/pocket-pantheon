@@ -10,6 +10,7 @@ import { CLOUD_HEIGHT, makeStormCloud } from '../art/weather-art.ts';
 import { RULES } from '../sim/rules.ts';
 import { FavorPips, PowerEffect, VillageRoot } from './components.ts';
 import { game } from './game.ts';
+import { makeOccludable } from './occlusion.ts';
 
 export class EffectsSystem extends createSystem({
   effects: { required: [PowerEffect] },
@@ -87,7 +88,7 @@ export class EffectsSystem extends createSystem({
       if (!root) return;
       this.storm = makeStormCloud(RULES.village.radius * 0.95);
       this.storm.position.y = RULES.village.radius * 0.15;
-      this.world.createTransformEntity(this.storm, { parent: root, persistent: true });
+      makeOccludable(this.world.createTransformEntity(this.storm, { parent: root, persistent: true }));
     }
     const storm = this.storm;
     storm.visible = this.stormLevel > 0.02;

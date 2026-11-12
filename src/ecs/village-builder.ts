@@ -8,6 +8,7 @@ import { makeFavorPips } from '../art/effects-art.ts';
 import { makeBuilding, makeDiorama, makeTablet, makeVillager } from '../art/village-art.ts';
 import { LAYOUT } from '../sim/rules.ts';
 import type { World as SimWorld } from '../sim/types.ts';
+import { makeOccludable } from './occlusion.ts';
 import { BuildingView, ChronicleTablet, DioramaView, FavorPips, VillagerView } from './components.ts';
 
 /** Where the chronicle tablet stands, beside the shrine (village space). */
@@ -16,13 +17,16 @@ export const TABLET_POS = { x: 0.095, z: -0.2 } as const;
 export function buildVillage(world: World, root: Entity, sim: SimWorld): void {
   const diorama = world.createTransformEntity(makeDiorama(), { parent: root });
   diorama.addComponent(DioramaView);
+  makeOccludable(diorama);
   const pips = world.createTransformEntity(makeFavorPips(), { parent: root });
   pips.addComponent(FavorPips);
+  makeOccludable(pips);
   const tabletObj = makeTablet();
   tabletObj.position.set(TABLET_POS.x, LAYOUT.baseHeight, TABLET_POS.z);
   tabletObj.rotation.y = Math.atan2(-TABLET_POS.x, -TABLET_POS.z);
   const tablet = world.createTransformEntity(tabletObj, { parent: root });
   tablet.addComponent(ChronicleTablet);
+  makeOccludable(tablet);
 
   sim.buildings.forEach((b, i) => {
     const obj = makeBuilding(b.kind);
@@ -34,6 +38,7 @@ export function buildVillage(world: World, root: Entity, sim: SimWorld): void {
     }
     const e = world.createTransformEntity(obj, { parent: root });
     e.addComponent(BuildingView, { simId: b.id, simIndex: i, kind: b.kind });
+    makeOccludable(e);
   });
 
   sim.villagers.forEach((v, i) => spawnVillagerView(world, root, sim, i));
@@ -54,5 +59,6 @@ export function spawnVillagerView(world: World, root: Entity, sim: SimWorld, ind
   });
   // Lift power: a hand pinch grabs the villager. Kept upright while carried.
   e.addComponent(OneHandGrabbable, { rotate: false, translate: true });
+  makeOccludable(e);
   return e;
 }
