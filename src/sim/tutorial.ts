@@ -5,8 +5,8 @@
  */
 import type { World } from './types.ts';
 
-export type TutorialStep = 'lift' | 'bless' | 'gaze' | 'rain' | 'shelter';
-export const TUTORIAL_STEPS: readonly TutorialStep[] = ['lift', 'bless', 'gaze', 'rain', 'shelter'];
+export type TutorialStep = 'lift' | 'bless' | 'gaze' | 'ride' | 'rain' | 'shelter';
+export const TUTORIAL_STEPS: readonly TutorialStep[] = ['lift', 'bless', 'gaze', 'ride', 'rain', 'shelter'];
 
 export interface Hint {
   step: TutorialStep | 'complete';
@@ -26,6 +26,10 @@ const HINTS: Record<TutorialStep, Omit<Hint, 'step'>> = {
   gaze: {
     title: 'See how they feel',
     body: 'Look at a villager for a moment to see their hunger, tiredness, Faith and Initiative.',
+  },
+  ride: {
+    title: 'Let them climb aboard',
+    body: 'Rest your open hand, palm up, beside the village and keep it still. Lift it to carry them; tilt it and they tumble.',
   },
   rain: {
     title: 'The fields are drying!',

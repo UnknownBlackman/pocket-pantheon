@@ -8,6 +8,7 @@ import { clamp01, clampToDisc, dist } from './math.ts';
 import { RULES } from './rules.ts';
 import type { Building, Villager, World } from './types.ts';
 import { assignIntent, buildingById } from './villager.ts';
+import { freshPresenceFields } from './world.ts';
 
 const R = RULES;
 
@@ -46,6 +47,8 @@ export function liftVillager(world: World, id: string, bus?: EventBus): boolean 
   const v = villagerById(world, id);
   if (!v || v.carried) return false;
   v.carried = true;
+  // A pinch takes priority over riding, hiding or a reaction.
+  Object.assign(v, freshPresenceFields());
   v.panic = 0;
   v.target = null;
   v.activity = 'idle';
@@ -90,6 +93,7 @@ export function dropVillager(
     v.decisionIn = 1 / R.sim.decisionHz;
     v.beliefs.initiative = clamp01(v.beliefs.initiative + R.beliefs.liftInitiative);
     markIntervention(world);
+    world.sessionCounts.lift += 1;
     const place = b.kind === 'campfire' ? 'campfire' : b.kind;
     if (firstToday(world, 'lifted')) {
       addChronicle(world, 'lifted', { name: v.name, place }, [v.id], bus);
@@ -123,6 +127,7 @@ export function blessVillager(world: World, id: string, bus?: EventBus): boolean
   v.beliefs.initiative = clamp01(v.beliefs.initiative + R.beliefs.blessVillagerInitiative);
   v.blessed = R.powers.blessSeconds;
   v.panic = 0;
+  world.sessionCounts.bless += 1;
   // A blessing wakes a waiting villager for a while.
   v.commit = 0;
   v.decisionIn = 0;
@@ -138,6 +143,7 @@ export function blessBuilding(world: World, id: string, bus?: EventBus): boolean
   const b = buildingById(world, id);
   if (!b || !spendFavor(world, R.powers.blessCost)) return false;
   b.blessed = R.powers.blessSeconds;
+  world.sessionCounts.bless += 1;
   for (const v of world.villagers) {
     if (v.targetId === b.id) {
       v.beliefs.faith = clamp01(v.beliefs.faith + R.beliefs.blessBuildingWorkerFaith);
@@ -161,6 +167,7 @@ export function rain(world: World, x: number, z: number, bus?: EventBus): boolea
   for (const b of world.buildings) {
     if (b.kind === 'field' && dist(b.pos, { x, z }) <= R.powers.rainRadius) b.water = 1;
   }
+  world.sessionCounts.rain += 1;
   markIntervention(world);
   if (firstToday(world, 'rain')) addChronicle(world, 'rain', {}, [], bus);
   bus?.emit('power.used', { kind: 'rain', targetId: null });
@@ -181,6 +188,7 @@ export function shelter(world: World, x: number, z: number, bus?: EventBus): boo
   for (const v of world.villagers) {
     if (dist(v.pos, { x, z }) <= R.powers.shelterRadius) v.panic = 0;
   }
+  world.sessionCounts.shelter += 1;
   markIntervention(world);
   if (firstToday(world, 'shelter')) addChronicle(world, 'shelter', {}, [], bus);
   bus?.emit('power.used', { kind: 'shelter', targetId: null });

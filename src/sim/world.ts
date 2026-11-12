@@ -8,6 +8,7 @@ import { clamp01 } from './math.ts';
 import { pick, random, randomRange } from './random.ts';
 import { RULES } from './rules.ts';
 import type { Building, BuildingKind, Villager, Weather, World } from './types.ts';
+import { divineTitle } from './title.ts';
 import { updateVillager } from './villager.ts';
 
 const R = RULES;
@@ -70,7 +71,33 @@ export function makeVillager(world: World, index: number): Villager {
     panic: 0,
     prayProgress: 0,
     blessed: 0,
+    ...freshPresenceFields(),
   };
+}
+
+/** Defaults for the presence-driven villager fields (also used by save migration). */
+export function freshPresenceFields(): Pick<
+  Villager,
+  'reaction' | 'reactionTime' | 'ride' | 'rideHand' | 'rideX' | 'rideZ' | 'rideTime' | 'rideY' | 'rideLifted' | 'rideHard' | 'hide' | 'hideTime'
+> {
+  return {
+    reaction: null,
+    reactionTime: 0,
+    ride: 'none',
+    rideHand: null,
+    rideX: 0,
+    rideZ: 0,
+    rideTime: 0,
+    rideY: 0,
+    rideLifted: false,
+    rideHard: false,
+    hide: 'none',
+    hideTime: 0,
+  };
+}
+
+export function freshSessionCounts(): World['sessionCounts'] {
+  return { lift: 0, ride: 0, bless: 0, rain: 0, shelter: 0 };
 }
 
 export function freshStats(): World['stats'] {
@@ -98,6 +125,9 @@ export function createWorld(seed = 1): World {
     stats: freshStats(),
     totals: { harvests: 0, prayers: 0, storms: 0 },
     tutorialDone: [],
+    eclipse: false,
+    sessionCounts: freshSessionCounts(),
+    title: '',
     sessionChronicleStart: 0,
     sessionStart: { faith: R.beliefs.startFaith, initiative: R.beliefs.startInitiative },
     lastSavedAt: 0,
@@ -198,11 +228,17 @@ function startDusk(world: World, bus?: EventBus): void {
   setWeather(world, 'clear', bus);
   if (averageBeliefs(world).faith > 0.7) addChronicle(world, 'festival', {}, [], bus);
   addChronicle(world, 'dusk', {}, [], bus);
+  const title = divineTitle(world);
+  if (title !== world.title) {
+    world.title = title;
+    addChronicle(world, 'title', { title }, [], bus);
+  }
   for (const v of world.villagers) {
     v.panic = 0;
     v.commit = 0;
     v.decisionIn = 0;
   }
+  world.eclipse = false;
   bus?.emit('session.dusk', { dayIndex: world.dayIndex });
 }
 
@@ -211,6 +247,7 @@ export function startSession(world: World, bus?: EventBus): void {
   world.session += 1;
   world.sessionDay = 0;
   world.sessionChronicleStart = world.chronicle.length;
+  world.sessionCounts = freshSessionCounts();
   world.phase = 'day';
   world.phaseTime = 0;
   const avg = averageBeliefs(world);

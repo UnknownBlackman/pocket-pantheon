@@ -21,6 +21,12 @@ export interface GameEvents {
   'power.failed': { kind: 'bless' | 'rain' | 'shelter'; need: number; have: number };
   'tutorial.completed': { step: string };
   'session.paused': { paused: boolean };
+  'villager.climbed': { villagerId: string };
+  'villager.fell': { villagerId: string; hard: boolean };
+  'villager.hid': { villagerId: string };
+  'hideseek.found': { count: number };
+  'god.waved': Record<string, never>;
+  'god.cheered': Record<string, never>;
 }
 
 export type GameEventName = keyof GameEvents;

@@ -22,7 +22,14 @@ export type ChronicleKind =
   | 'dependent'
   | 'festival'
   | 'dusk'
-  | 'away';
+  | 'away'
+  | 'eclipse'
+  | 'rode'
+  | 'fell'
+  | 'found'
+  | 'waved'
+  | 'cheered'
+  | 'title';
 
 type Vars = Record<string, string | number>;
 
@@ -51,7 +58,25 @@ const TEMPLATES: Record<ChronicleKind, (v: Vars) => string> = {
     `Day ${v.day}: faith ran high, and the village held a festival.`,
   dusk: (v) => `Day ${v.day}: the villagers gathered around the fire at dusk.`,
   away: (v) => `While you were away: ${v.summary}`,
+  eclipse: (v) => `Day ${v.day}: the god's hand darkened the sky, and the village knelt.`,
+  rode: (v) => `Day ${v.day}: ${v.name} rode upon the hand of the god to the ${v.place}.`,
+  fell: (v) => `Day ${v.day}: ${v.name} fell from the god's palm.`,
+  found: (v) => `Day ${v.day}: the god found ${v.name} hiding.`,
+  waved: (v) => `Day ${v.day}: the god waved, and the village waved back.`,
+  cheered: (v) => `Day ${v.day}: the god raised both hands, and the village cheered.`,
+  title: (v) => `Day ${v.day}: the villagers began to call you ${v.title}.`,
 };
+
+/** True when no entry of this kind has been written today. */
+export function firstToday(world: World, kind: ChronicleKind): boolean {
+  const day = world.dayIndex + 1;
+  for (let i = world.chronicle.length - 1; i >= 0; i--) {
+    const e = world.chronicle[i];
+    if (e.day !== day) break;
+    if (e.kind === kind) return false;
+  }
+  return true;
+}
 
 /** Appends an entry, records it in each named villager's memory and emits an event. */
 export function addChronicle(

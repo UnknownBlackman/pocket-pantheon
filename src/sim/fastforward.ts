@@ -9,7 +9,7 @@ import { clamp01 } from './math.ts';
 import { random } from './random.ts';
 import { RULES } from './rules.ts';
 import type { World } from './types.ts';
-import { averageBeliefs, makeVillager } from './world.ts';
+import { averageBeliefs, freshPresenceFields, makeVillager } from './world.ts';
 
 const FOOD_EATEN_PER_DAY = 20;
 const HARVESTS_PER_FIELD_PER_DAY = 1;
@@ -73,6 +73,7 @@ export function fastForward(world: World, hours: number): AwayReport {
     v.target = null;
     v.intent = 'idle';
     v.commit = 0;
+    Object.assign(v, freshPresenceFields());
   }
   world.effects.length = 0;
 

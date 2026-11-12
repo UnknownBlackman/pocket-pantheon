@@ -15,7 +15,7 @@ describe('tutorial', () => {
 
   it('waits for the drought before teaching rain, and the storm for shelter', () => {
     const w = createWorld(31);
-    for (const s of ['lift', 'bless', 'gaze'] as const) completeStep(w, s);
+    for (const s of ['lift', 'bless', 'gaze', 'ride'] as const) completeStep(w, s);
     assert.equal(currentHint(w), null, 'no hint while waiting for the drought');
     setWeather(w, 'drought');
     assert.equal(currentHint(w)?.step, 'rain');

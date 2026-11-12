@@ -215,13 +215,7 @@ function doWork(world: World, v: Villager, dt: number, bus?: EventBus): void {
     }
     case 'pray': {
       v.activity = 'pray';
-      v.prayProgress += dt;
-      if (v.prayProgress >= R.favor.prayerSeconds) {
-        v.prayProgress -= R.favor.prayerSeconds;
-        world.favor = Math.min(R.favor.max, world.favor + R.favor.perPrayer);
-        world.stats.prayers += 1;
-        world.totals.prayers += 1;
-      }
+      accumulatePrayer(world, v, dt);
       break;
     }
     case 'gather': {
@@ -230,6 +224,17 @@ function doWork(world: World, v: Villager, dt: number, bus?: EventBus): void {
     }
     default:
       v.activity = 'idle';
+  }
+}
+
+/** Prayer time turns into Favor: one prayer every prayerSeconds. */
+export function accumulatePrayer(world: World, v: Villager, dt: number): void {
+  v.prayProgress += dt;
+  if (v.prayProgress >= R.favor.prayerSeconds) {
+    v.prayProgress -= R.favor.prayerSeconds;
+    world.favor = Math.min(R.favor.max, world.favor + R.favor.perPrayer);
+    world.stats.prayers += 1;
+    world.totals.prayers += 1;
   }
 }
 
@@ -261,6 +266,13 @@ export function updateVillager(world: World, v: Villager, dt: number, bus?: Even
   );
   if (v.blessed > 0) v.blessed = Math.max(0, v.blessed - dt);
 
+  // Riding the god's palm or hiding behind the god's hand: sim/presence.ts
+  // moves them; only their needs advance here.
+  if (v.ride !== 'none' || v.hide !== 'none') {
+    updateMood(v);
+    return;
+  }
+
   // Panic overrides everything unless sheltered.
   const sheltered = isSheltered(world, v.pos.x, v.pos.z);
   if (v.panic > 0) {
@@ -270,6 +282,19 @@ export function updateVillager(world: World, v: Villager, dt: number, bus?: Even
     v.pos.x += randomRange(world, -1, 1) * R.village.walkSpeed * 1.5 * dt;
     v.pos.z += randomRange(world, -1, 1) * R.village.walkSpeed * 1.5 * dt;
     clampToDisc(v.pos, R.village.radius * 0.9);
+    updateMood(v);
+    return;
+  }
+  // Short reactions to the god (awe, waving, cheering, dazed, kneeling).
+  if (v.reactionTime > 0) {
+    v.reactionTime -= dt;
+    v.activity = v.reaction ?? 'idle';
+    if (v.reaction === 'pray') accumulatePrayer(world, v, dt);
+    if (v.reactionTime <= 0) {
+      v.reaction = null;
+      v.reactionTime = 0;
+      v.decisionIn = 0;
+    }
     updateMood(v);
     return;
   }

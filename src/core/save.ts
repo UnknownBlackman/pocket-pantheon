@@ -5,6 +5,7 @@
  * in so the logic can be tested in Node.
  */
 import { fastForward } from '../sim/fastforward.ts';
+import { freshPresenceFields, freshSessionCounts } from '../sim/world.ts';
 import type { AwayReport } from '../sim/fastforward.ts';
 import { RULES } from '../sim/rules.ts';
 import type { World } from '../sim/types.ts';
@@ -33,6 +34,11 @@ export function deserializeWorld(json: string): World | null {
     w.tutorialDone ??= [];
     w.effects ??= [];
     w.sessionChronicleStart ??= 0;
+    w.eclipse = false;
+    w.sessionCounts ??= freshSessionCounts();
+    w.title ??= '';
+    // Nobody is mid-ride or mid-hide after a reload.
+    for (const v of w.villagers) Object.assign(v, freshPresenceFields());
     return w as World;
   } catch {
     return null;

@@ -220,3 +220,80 @@ export const LAYOUT = {
   /** Seated reach: ignore table spots further than this from the head (horizontal). */
   maxReach: 0.9,
 } as const;
+
+/**
+ * The god's hands and head among the villagers (sim/presence.ts). Heights
+ * are above the diorama surface, distances on the table plane, metres.
+ */
+export const PRESENCE = {
+  /** A hand moving slower than this (m/s) counts as held still. */
+  stillSpeed: 0.08,
+  // The god's shadow
+  shadowMaxHeight: 0.35,
+  shadowPalmRadius: 0.055,
+  shadowTipRadius: 0.022,
+  /** Shadows grow this much per metre of hand height. */
+  shadowGrowPerMetre: 2.5,
+  /** Seconds a villager keeps looking up after the shadow leaves. */
+  aweSeconds: 0.6,
+  /** Villagers under a still hand for this long kneel and pray (an eclipse). */
+  eclipseVillagers: 3,
+  eclipseSeconds: 1.5,
+
+  // Riding the god's palm
+  maxRiders: 3,
+  /** An open palm, facing up, held still this low beside the village invites riders. */
+  inviteMaxHeight: 0.07,
+  inviteSeconds: 0.8,
+  inviteRadius: 0.18,
+  /** Chance per second that a villager climbs on, times their Faith. */
+  climbRatePerFaith: 0.9,
+  climbSpeedMultiplier: 1.4,
+  /** Riders sit within this radius of the palm centre. */
+  rideSpread: 0.02,
+  /** Riders fall when the palm tilts more than this, closes, or moves this fast. */
+  fallTiltDegrees: 35,
+  fallSpeed: 0.6,
+  fallSeconds: 0.45,
+  dazeSeconds: 2,
+  /** The hand counts as lifted above this height; set down below setDownHeight. */
+  liftedHeight: 0.08,
+  setDownHeight: 0.035,
+  rideFaith: 0.02,
+  rideInitiative: -0.02,
+  fallFaith: -0.03,
+
+  // Hide-and-seek
+  /** A hand resting this low (not palm up), still, for this long starts the game. */
+  restMaxHeight: 0.05,
+  restSeconds: 1.5,
+  hideRadius: 0.25,
+  maxHiders: 3,
+  /** Chance per second a villager joins, times their Initiative (the curious ones). */
+  hideRatePerInitiative: 0.8,
+  /** Hiders crouch this far behind the hand, away from the god's eyes. */
+  hideBehind: 0.06,
+  hideBoredSeconds: 25,
+  /** Lifting the hand this fast or this high finds them. */
+  foundSpeed: 0.45,
+  foundHeight: 0.1,
+  foundCheerSeconds: 2,
+
+  // They see you
+  reactSeconds: 2.5,
+  /** The god's head counts as leaning close within these limits. */
+  headNearHeight: 0.45,
+  headNearDistance: 0.45,
+} as const;
+
+/** Wave and raised-hands detection (xr/gestures.ts). */
+export const WAVE = {
+  /** Side-to-side reversals needed, within the window, each swing this long. */
+  reversals: 3,
+  windowSeconds: 1.6,
+  minSwing: 0.03,
+  /** The waving hand must be at least this high above the table. */
+  minHeight: 0.12,
+  /** Raised hands: palms this far above eye level (negative = below). */
+  raisedAboveEye: -0.05,
+} as const;

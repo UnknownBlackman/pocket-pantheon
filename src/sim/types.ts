@@ -13,7 +13,19 @@ export type Activity =
   | 'rest'
   | 'pray'
   | 'panic'
-  | 'cheer';
+  | 'cheer'
+  // Reactions to the god's hands and head (sim/presence.ts):
+  | 'awe' // looking up at the hand's shadow
+  | 'wave' // waving back at the god
+  | 'daze' // dizzy after falling off a hand
+  | 'climb' // walking to and hopping onto an open palm
+  | 'ride' // sitting on the god's palm
+  | 'fall' // tumbling off the palm
+  | 'hide'; // hiding behind the god's resting hand
+
+export type RideState = 'none' | 'climb' | 'ride' | 'fall';
+export type HideState = 'none' | 'going' | 'hiding';
+export type HandSide = 'left' | 'right';
 
 /** What the villager is trying to do; `activity` is what they are doing right now. */
 export type Intent = 'idle' | 'farm' | 'rest' | 'pray' | 'gather';
@@ -46,6 +58,34 @@ export interface Villager {
   prayProgress: number;
   /** Seconds of personal bless remaining. */
   blessed: number;
+
+  /** A short timed reaction (awe, wave, cheer, daze, pray) that overrides work. */
+  reaction: Activity | null;
+  reactionTime: number;
+  /** Riding the god's palm. Offsets are on the table plane from the palm centre. */
+  ride: RideState;
+  rideHand: HandSide | null;
+  rideX: number;
+  rideZ: number;
+  /** Seconds in the current ride state; height (m) when a fall began. */
+  rideTime: number;
+  rideY: number;
+  /** True once the riding hand has been lifted off the table. */
+  rideLifted: boolean;
+  /** True when the current fall was rough (tilted, fast or closed hand): dazes. */
+  rideHard: boolean;
+  /** Hide-and-seek behind the god's resting hand. */
+  hide: HideState;
+  hideTime: number;
+}
+
+/** What the god did this session, for the divine title at dusk. */
+export interface SessionCounts {
+  lift: number;
+  ride: number;
+  bless: number;
+  rain: number;
+  shelter: number;
 }
 
 export type BuildingKind = 'field' | 'hut' | 'shrine' | 'campfire';
@@ -112,6 +152,12 @@ export interface World {
   stats: DayStats;
   /** Totals over the whole save, for milestones like "first harvest". */
   totals: { harvests: number; prayers: number; storms: number };
+  /** True while the god's hand darkens three or more villagers (they kneel). */
+  eclipse: boolean;
+  /** This session's interventions, reset each session. */
+  sessionCounts: SessionCounts;
+  /** What the villagers call the god (sim/title.ts); '' until the first dusk. */
+  title: string;
   /** Tutorial steps the player has completed (see sim/tutorial.ts). */
   tutorialDone: string[];
   /** Index of the first chronicle entry of the current session. */
