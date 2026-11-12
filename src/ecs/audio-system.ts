@@ -9,10 +9,22 @@ import { events } from '../core/events.ts';
 export class AudioSystem extends createSystem({}) {
   init(): void {
     this.cleanupFuncs.push(
-      events.on('villager.climbed', () => hop()),
-      events.on('villager.fell', (e) => tumble(e.hard)),
-      events.on('villager.hid', () => giggle()),
-      events.on('hideseek.found', () => cheer()),
+      events.on('villager.climbed', (e) => {
+        hop();
+        console.info(`[presence] ${e.villagerId} climbed onto the hand`);
+      }),
+      events.on('villager.fell', (e) => {
+        tumble(e.hard);
+        console.info(`[presence] ${e.villagerId} ${e.hard ? 'fell off' : 'hopped down from'} the hand`);
+      }),
+      events.on('villager.hid', (e) => {
+        giggle();
+        console.info(`[presence] ${e.villagerId} is hiding behind the hand`);
+      }),
+      events.on('hideseek.found', (e) => {
+        cheer();
+        console.info(`[presence] found ${e.count} hiding`);
+      }),
       events.on('god.waved', () => cheer()),
       events.on('god.cheered', () => cheer()),
     );
