@@ -290,6 +290,8 @@ function updateRiding(
   for (const v of world.villagers) {
     if (onHand >= P.maxRiders) break;
     if (busy(v) || v.reactionTime > 0) continue;
+    // Just delivered to a job (by riding or a pinch): they get to work first.
+    if (v.commit > 0 && v.intent !== 'idle') continue;
     if (dist(v.pos, scratch) > P.inviteRadius) continue;
     if (random(world) >= v.beliefs.faith * P.climbRatePerFaith * dt) continue;
     v.ride = 'climb';

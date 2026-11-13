@@ -119,6 +119,23 @@ describe('riding the god\'s palm', () => {
     assert.equal(w.sessionCounts.ride, 1);
   });
 
+  it('riders set down on a job get to work instead of climbing straight back on', () => {
+    const { w, p } = inviteWorld(62);
+    run(w, p, 6);
+    const v = w.villagers[0];
+    assert.equal(v.ride, 'ride');
+    const field = w.buildings.find((b) => b.kind === 'field')!;
+    hand(p, 'right', { x: field.pos.x, y: 0.15, z: field.pos.z, palmUp: true, tilt: 5 });
+    run(w, p, 0.3);
+    hand(p, 'right', { x: field.pos.x, y: 0.02, z: field.pos.z, palmUp: true, tilt: 5 });
+    run(w, p, 0.3);
+    assert.equal(v.ride, 'none');
+    // The open palm stays on the field, still inviting.
+    run(w, p, 5);
+    assert.equal(v.ride, 'none', 'climbed back on while committed to the job');
+    assert.equal(v.activity, 'farm');
+  });
+
   it('tilting the hand tips them off: they land dazed and lose a little Faith', () => {
     const { w, p } = inviteWorld(55);
     run(w, p, 6);
