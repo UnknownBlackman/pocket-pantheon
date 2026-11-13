@@ -103,7 +103,8 @@ export class PlacementSystem extends createSystem({
     game.placementSource = 'fallback';
     game.stage = 'playing';
     uiState.placing = false;
-    setHintPanel(this.world, 'welcome');
+    // The HTML welcome page (index.html) greets the player outside XR.
+    setHintPanel(this.world, 'hidden');
   }
 
   // ---------------------------------------------------------------- Arrival

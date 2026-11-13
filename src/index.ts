@@ -24,6 +24,8 @@ import { SyncSystem } from './ecs/sync-system.js';
 import { UISystem } from './ecs/ui-system.js';
 import { buildVillage } from './ecs/village-builder.js';
 import { PanelSystem } from './panel.js';
+import { PreviewCameraSystem } from './ecs/preview-camera-system.js';
+import { setupWelcomePage } from './ui/welcome-page.js';
 
 // Shift+F on the flat page: start a brand-new village (for testing and filming).
 window.addEventListener('keydown', (e) => {
@@ -71,7 +73,10 @@ World.create(
     .registerSystem(StatsSystem, { priority: P.ui })
     .registerSystem(LifeSystem, { priority: P.effects })
     .registerSystem(PanelSystem, { priority: P.ui })
-    .registerSystem(SaveSystem, { priority: P.save });
+    .registerSystem(SaveSystem, { priority: P.save })
+    .registerSystem(PreviewCameraSystem, { priority: P.ui });
+
+  setupWelcomePage(world);
 
   // The village root starts hidden; PlacementSystem plants it on the table
   // (or at a preview spot outside XR) and anchors it where supported.

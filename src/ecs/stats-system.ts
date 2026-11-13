@@ -1,29 +1,31 @@
 /**
  * How the player sees their stats:
- * - a painted signboard on a post at the front-right of the rim, always
+ * - a painted signboard hanging above the back-left of the village, always
  *   facing the player: day and time, weather, Favor, Faith and Initiative
  *   with the balance, villagers and food, and the divine title;
  * - a palm card: turn the left palm towards your face (a hands-only "wrist
  *   menu") to see believers, independents, those waiting on you, the hungry
  *   and the remembered dead.
  */
-import { createSystem, Mesh, CylinderGeometry, Vector3, VisibilityState } from '@iwsdk/core';
+import { createSystem, Vector3, VisibilityState } from '@iwsdk/core';
 import type { Entity } from '@iwsdk/core';
-import { PALETTE } from '../scene-assets/village-materials.ts';
 import { aliveCount, isChild } from '../sim/life.ts';
 import { LAYOUT, RULES } from '../sim/rules.ts';
 import { averageBeliefs } from '../sim/world.ts';
-import { CanvasPanel } from '../ui/canvas-panel.ts';
+import { CanvasPanel, raiseAbove } from '../ui/canvas-panel.ts';
 import { drawPalmCard, drawSignboard } from '../ui/stats-panels.ts';
 import { isPalmFacing } from '../xr/gestures.ts';
 import { hands } from '../xr/hand-state.ts';
 import { VillageRoot } from './components.ts';
 import { game } from './game.ts';
 
-/** Signboard spot in village space (front-right, just inside the rim). */
-const SIGN_LOCAL = { x: 0.205, z: 0.2 };
-const POST_HEIGHT = 0.03;
-const SIGN_WIDTH = 0.15;
+/**
+ * Signboard spot in village space: raised above the right-hand side of the
+ * village and brought towards the player, so it is close enough to read
+ * and floats above the villagers instead of covering them.
+ */
+const SIGN_LOCAL = { x: 0.24, y: 0.19, z: 0.17 };
+const SIGN_WIDTH = 0.19;
 const SIGN_PX = { w: 640, h: 390 };
 const REFRESH = 0.5;
 const PALM_HOLD = 0.3;
@@ -41,7 +43,6 @@ export class StatsSystem extends createSystem({
 }) {
   private sign!: CanvasPanel;
   private palm!: CanvasPanel;
-  private post: Mesh | null = null;
   private signKey = '';
   private palmKey = '';
   private refreshIn = 0;
@@ -55,7 +56,7 @@ export class StatsSystem extends createSystem({
     this.world.createTransformEntity(this.sign.mesh, { persistent: true });
     this.palm = new CanvasPanel(520, 400, 0.12, 'PalmCard');
     this.palm.mesh.visible = false;
-    this.palm.mesh.renderOrder = 46;
+    raiseAbove(this.palm);
     this.world.createTransformEntity(this.palm.mesh, { persistent: true });
   }
 
@@ -87,15 +88,7 @@ export class StatsSystem extends createSystem({
 
   private placeSign(root: Entity): void {
     const rootObj = root.object3D!;
-    if (!this.post) {
-      const post = new Mesh(new CylinderGeometry(0.0025, 0.003, POST_HEIGHT, 6), PALETTE.wood);
-      post.name = 'SignPost';
-      post.position.set(SIGN_LOCAL.x, LAYOUT.baseHeight + POST_HEIGHT / 2, SIGN_LOCAL.z);
-      this.world.createTransformEntity(post, { parent: root, persistent: true });
-      this.post = post;
-    }
-    const boardH = (SIGN_WIDTH * SIGN_PX.h) / SIGN_PX.w;
-    this.v.set(SIGN_LOCAL.x, LAYOUT.baseHeight + POST_HEIGHT + boardH / 2 - 0.004, SIGN_LOCAL.z);
+    this.v.set(SIGN_LOCAL.x, LAYOUT.baseHeight + SIGN_LOCAL.y, SIGN_LOCAL.z);
     rootObj.localToWorld(this.v);
     const mesh = this.sign.mesh;
     mesh.position.copy(this.v);

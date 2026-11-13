@@ -13,7 +13,7 @@ import { chime } from '../audio/sfx.ts';
 import { events } from '../core/events.ts';
 import { LAYOUT } from '../sim/rules.ts';
 import { averageBeliefs, duskScore, startSession } from '../sim/world.ts';
-import { CanvasPanel } from '../ui/canvas-panel.ts';
+import { CanvasPanel, raiseAbove } from '../ui/canvas-panel.ts';
 import { drawChronicle, drawDusk } from '../ui/panels.ts';
 import type { DuskSummary, PanelButton } from '../ui/panels.ts';
 import { PressTracker, touchedButton } from '../ui/poke.ts';
@@ -62,6 +62,7 @@ export class ChronicleSystem extends createSystem({
 
   private makePanel(w: number, h: number, widthM: number, name: string): CanvasPanel {
     const panel = new CanvasPanel(w, h, widthM, name);
+    raiseAbove(panel);
     panel.mesh.visible = false;
     this.world.createTransformEntity(panel.mesh, { persistent: true });
     return panel;

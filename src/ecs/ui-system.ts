@@ -13,7 +13,7 @@ import { events } from '../core/events.ts';
 import { GESTURES, LAYOUT } from '../sim/rules.ts';
 import { guideStep, skipGuide } from '../sim/tutorial.ts';
 import { PressTracker, touchedButton } from '../ui/poke.ts';
-import { CanvasPanel } from '../ui/canvas-panel.ts';
+import { CanvasPanel, raiseAbove } from '../ui/canvas-panel.ts';
 import { drawButtons, drawHint, drawPause } from '../ui/panels.ts';
 import type { PanelButton } from '../ui/panels.ts';
 import { showToast, uiState } from '../ui/ui-state.ts';
@@ -95,6 +95,7 @@ export class UISystem extends createSystem({
 
   private makePanel(w: number, h: number, widthM: number, name: string): CanvasPanel {
     const panel = new CanvasPanel(w, h, widthM, name);
+    raiseAbove(panel); // over villager cards and speech bubbles
     panel.mesh.visible = false;
     this.world.createTransformEntity(panel.mesh, { persistent: true });
     return panel;

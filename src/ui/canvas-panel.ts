@@ -77,6 +77,15 @@ export class CanvasPanel {
   }
 }
 
+/**
+ * Front-layer UI (tutorial scroll, notices, pause, dusk, chronicle, palm
+ * card): drawn after and over the floating villager cards and bubbles.
+ */
+export function raiseAbove(panel: CanvasPanel): void {
+  (panel.mesh.material as MeshBasicMaterial).depthTest = false;
+  panel.mesh.renderOrder = 60;
+}
+
 export function roundRect(
   ctx: CanvasRenderingContext2D,
   x: number,
