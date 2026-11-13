@@ -2,7 +2,7 @@
  * Drawing for the spatial panels. Each panel is a CanvasPanel; buttons are
  * canvas rectangles hit-tested against the index fingertip by UISystem.
  */
-import { CanvasPanel, roundRect, UI_COLORS, UI_FONT, wrapText } from './canvas-panel.ts';
+import { CanvasPanel, roundRect, rule, UI_COLORS, UI_FONT, wrapText } from './canvas-panel.ts';
 
 export interface PanelButton {
   id: string;
@@ -18,25 +18,45 @@ export function drawHint(panel: CanvasPanel, title: string, body: string): void 
   const ctx = panel.begin();
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = UI_COLORS.title;
-  ctx.font = `700 44px ${UI_FONT}`;
-  ctx.fillText(title, 36, 74);
+  let size = 44;
+  ctx.font = `700 ${size}px ${UI_FONT}`;
+  while (ctx.measureText(title).width > panel.widthPx - 80 && size > 30) {
+    size -= 2;
+    ctx.font = `700 ${size}px ${UI_FONT}`;
+  }
+  ctx.fillText(title, 40, 76);
+  rule(ctx, 40, 96, panel.widthPx - 80);
   ctx.fillStyle = UI_COLORS.text;
-  ctx.font = `500 32px ${UI_FONT}`;
-  wrapText(ctx, body, 36, 128, panel.widthPx - 72, 42, 4);
+  ctx.font = `500 30px ${UI_FONT}`;
+  wrapText(ctx, body, 40, 140, panel.widthPx - 80, 38, 4);
   panel.commit();
 }
 
 export function drawButtons(panel: CanvasPanel, buttons: readonly PanelButton[], hot: string | null): void {
   const ctx = panel.ctx;
   for (const b of buttons) {
-    roundRect(ctx, b.x, b.y, b.w, b.h, 22);
-    ctx.fillStyle = b.id === hot ? 'rgba(255, 211, 107, 0.95)' : 'rgba(255, 255, 255, 0.12)';
+    // A small wooden plaque; it glows gold under the fingertip.
+    roundRect(ctx, b.x, b.y, b.w, b.h, 14);
+    const g = ctx.createLinearGradient(0, b.y, 0, b.y + b.h);
+    if (b.id === hot) {
+      g.addColorStop(0, '#f6d27a');
+      g.addColorStop(1, '#d9a740');
+    } else {
+      g.addColorStop(0, '#8a5a34');
+      g.addColorStop(1, '#5e3a20');
+    }
+    ctx.fillStyle = g;
     ctx.fill();
     ctx.lineWidth = 3;
-    ctx.strokeStyle = UI_COLORS.border;
+    ctx.strokeStyle = '#3a2414';
     ctx.stroke();
-    ctx.fillStyle = b.id === hot ? '#2a1c10' : UI_COLORS.text;
-    ctx.font = `700 34px ${UI_FONT}`;
+    ctx.fillStyle = b.id === hot ? '#3a2414' : '#f6ead0';
+    let fs = 32;
+    ctx.font = `700 ${fs}px ${UI_FONT}`;
+    while (ctx.measureText(b.label).width > b.w - 20 && fs > 18) {
+      fs -= 2;
+      ctx.font = `700 ${fs}px ${UI_FONT}`;
+    }
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 2);

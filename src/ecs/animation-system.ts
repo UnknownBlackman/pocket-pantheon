@@ -95,14 +95,16 @@ export class AnimationSystem extends createSystem({
             sx = 1 + 0.06 * ease;
             rx = (0.3 + Math.sin(t * 2) * 0.2) * ease;
             break;
-          case 'panic':
-            jx = Math.sin(t * 47) * 0.002;
-            jz = Math.cos(t * 39) * 0.002;
-            y = Math.abs(Math.sin(t * 20)) * 0.005;
-            rz = Math.sin(t * 30) * 0.3;
-            sy = 1.08;
-            sx = 0.94;
+          case 'panic': {
+            // A frantic run: leaning forward, quick bouncing strides.
+            const stride = Math.sin(t * 24);
+            y = Math.abs(stride) * 0.006;
+            rx = 0.32;
+            rz = stride * 0.14;
+            sy = 1.04 + Math.sin(t * 48) * 0.05;
+            sx = 2 - sy;
             break;
+          }
           case 'cheer': {
             const hop = Math.sin(t * 8);
             y = Math.max(0, hop) * 0.012;

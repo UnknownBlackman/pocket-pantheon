@@ -282,9 +282,20 @@ export function accumulatePrayer(world: World, v: Villager, dt: number): void {
   }
 }
 
+/** Somewhere 6-11 cm away, roughly away from where they were heading. */
+function fleeSpot(world: World, v: Villager): { x: number; z: number } {
+  const a = random(world) * Math.PI * 2;
+  const r = 0.06 + random(world) * 0.05;
+  const t = { x: v.pos.x + Math.cos(a) * r, z: v.pos.z + Math.sin(a) * r };
+  clampToDisc(t, R.village.radius * 0.85);
+  return t;
+}
+
 function startPanic(world: World, v: Villager, bus?: EventBus): void {
   v.panic = R.weather.panicSeconds;
   v.activity = 'panic';
+  v.target = fleeSpot(world, v);
+  v.targetId = null;
   world.stats.panics += 1;
   if (world.stats.panics === 1) {
     addChronicle(world, 'panic', { name: v.name }, [v.id], bus);
@@ -330,9 +341,14 @@ export function updateVillager(world: World, v: Villager, dt: number, bus?: Even
     v.panic -= dt;
     if (sheltered) v.panic = 0;
     v.activity = 'panic';
-    v.pos.x += randomRange(world, -1, 1) * R.village.walkSpeed * 1.5 * dt;
-    v.pos.z += randomRange(world, -1, 1) * R.village.walkSpeed * 1.5 * dt;
+    // Run for it: dash to a spot, then dart off somewhere else (zig-zag).
+    const arrived = v.target ? stepTowards(v.pos, v.target, R.village.walkSpeed * R.weather.panicRunSpeed * dt) : true;
+    if (arrived || random(world) < dt / R.weather.panicTurnSeconds) v.target = fleeSpot(world, v);
     clampToDisc(v.pos, R.village.radius * 0.9);
+    if (v.panic <= 0) {
+      v.target = null;
+      v.decisionIn = 0;
+    }
     updateMood(v);
     return;
   }

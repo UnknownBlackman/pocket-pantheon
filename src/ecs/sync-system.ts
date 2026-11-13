@@ -90,7 +90,7 @@ export class SyncSystem extends createSystem({
       } else if (v.activity === 'climb' && v.rideHand && p.hands[v.rideHand].present) {
         fx = p.hands[v.rideHand].x - obj.position.x;
         fz = p.hands[v.rideHand].z - obj.position.z;
-      } else if (v.activity === 'walk' && v.target) {
+      } else if ((v.activity === 'walk' || v.activity === 'panic') && v.target) {
         fx = v.target.x - v.pos.x;
         fz = v.target.z - v.pos.z;
       } else if (v.activity === 'cheer' || v.activity === 'pray' || v.activity === 'farm') {

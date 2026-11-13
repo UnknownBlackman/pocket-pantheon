@@ -71,6 +71,37 @@ const LINES: Record<BarkKind, readonly string[]> = {
   waiting: ['What should I do?', 'Give us a sign...'],
 };
 
+export type BarkMood = 'calm' | 'joy' | 'sad' | 'alarm';
+
+const MOODS: Partial<Record<BarkKind, BarkMood>> = {
+  awe: 'joy',
+  kneel: 'joy',
+  ride: 'joy',
+  climb: 'joy',
+  found: 'joy',
+  wave: 'joy',
+  cheer: 'joy',
+  blessed: 'joy',
+  rain: 'joy',
+  sheltered: 'joy',
+  calm: 'joy',
+  newborn: 'joy',
+  play: 'joy',
+  lifted: 'alarm',
+  fall: 'alarm',
+  panic: 'alarm',
+  swat: 'alarm',
+  starving: 'sad',
+  mourn: 'sad',
+  limp: 'sad',
+  waiting: 'sad',
+};
+
+/** The feeling behind a line, which sets its bubble's look. */
+export function moodFor(kind: BarkKind): BarkMood {
+  return MOODS[kind] ?? 'calm';
+}
+
 /** A line for the moment; `pick` is a random source in [0, 1). */
 export function barkLine(kind: BarkKind, pick: () => number): string {
   const lines = LINES[kind];

@@ -140,6 +140,10 @@ export const RULES = {
     stormPanicChance: 0.05,
     /** Seconds a panic lasts. */
     panicSeconds: 3,
+    /** Panicking villagers run this many times walking speed... */
+    panicRunSpeed: 2.3,
+    /** ...and dart in a new direction about this often (seconds). */
+    panicTurnSeconds: 0.9,
     /** During drought, hunger grows this much faster (thirst). */
     droughtHungerMultiplier: 1.4,
     /** Drought thirst panic happens when hunger is above this during drought. */

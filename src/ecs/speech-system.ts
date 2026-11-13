@@ -8,19 +8,30 @@
 import { createSystem, Vector3, VisibilityState } from '@iwsdk/core';
 import type { Entity, MeshBasicMaterial } from '@iwsdk/core';
 import { events } from '../core/events.ts';
-import { barkLine, narration } from '../sim/barks.ts';
+import { barkLine, moodFor, narration } from '../sim/barks.ts';
+import { TUNICS } from '../scene-assets/village.scene-asset.ts';
+import { drawSpeechBubble } from '../ui/bubble.ts';
 import type { BarkKind } from '../sim/barks.ts';
 import { causeText, isChild, villagerScale } from '../sim/life.ts';
 import { LAYOUT } from '../sim/rules.ts';
 import { stormStrength } from '../sim/storm.ts';
 import type { DeathCause, Villager } from '../sim/types.ts';
-import { CanvasPanel, UI_COLORS, UI_FONT, wrapText } from '../ui/canvas-panel.ts';
+import { CanvasPanel, ribbon } from '../ui/canvas-panel.ts';
 import { narrate, say, speech } from '../ui/speech.ts';
 import { showToast } from '../ui/ui-state.ts';
 import { VillageRoot, VillagerView } from './components.ts';
 import { game } from './game.ts';
 
 const BUBBLES = 3;
+/** Bubble canvas and size: about 13 cm wide, bottom-anchored on the tail. */
+const BUBBLE_PX_W = 560;
+const BUBBLE_PX_H = 300;
+const BUBBLE_W = 0.13;
+const BUBBLE_H = (BUBBLE_W * BUBBLE_PX_H) / BUBBLE_PX_W;
+
+function tunicCss(index: number): string {
+  return `#${TUNICS[index % TUNICS.length].toString(16).padStart(6, '0')}`;
+}
 const GLOBAL_GAP = 1.2;
 const PER_VILLAGER_GAP = 8;
 const CAPTION_SECONDS = 5;
@@ -31,6 +42,7 @@ interface Bubble {
   panel: CanvasPanel;
   index: number;
   left: number;
+  total: number;
 }
 
 export class SpeechSystem extends createSystem({
@@ -54,14 +66,14 @@ export class SpeechSystem extends createSystem({
 
   init(): void {
     for (let i = 0; i < BUBBLES; i++) {
-      const panel = new CanvasPanel(440, 110, 0.1, 'SpeechBubble');
+      const panel = new CanvasPanel(BUBBLE_PX_W, BUBBLE_PX_H, BUBBLE_W, 'SpeechBubble');
       (panel.mesh.material as MeshBasicMaterial).depthTest = false;
       panel.mesh.renderOrder = 45;
       panel.mesh.visible = false;
       this.world.createTransformEntity(panel.mesh, { persistent: true });
-      this.bubbles.push({ panel, index: -1, left: 0 });
+      this.bubbles.push({ panel, index: -1, left: 0, total: 1 });
     }
-    this.caption = new CanvasPanel(900, 76, 0.3, 'NarrationCaption');
+    this.caption = new CanvasPanel(1000, 120, 0.32, 'NarrationCaption');
     (this.caption.mesh.material as MeshBasicMaterial).depthTest = false;
     this.caption.mesh.renderOrder = 44;
     this.caption.mesh.visible = false;
@@ -93,7 +105,7 @@ export class SpeechSystem extends createSystem({
   private bark(index: number, kind: BarkKind, force = false): void {
     if (index < 0) return;
     if (!force && this.clock - (this.lastSaid[index] ?? -99) < PER_VILLAGER_GAP) return;
-    say(index, barkLine(kind, this.rand));
+    say(index, barkLine(kind, this.rand), 3.2, false, moodFor(kind));
   }
 
   private listen(): void {
@@ -257,7 +269,13 @@ export class SpeechSystem extends createSystem({
       b ??= this.bubbles.reduce((a, c) => (c.left < a.left ? c : a));
       b.index = req.index;
       b.left = req.seconds;
-      this.draw(b.panel, req.text, req.priority);
+      b.total = req.seconds;
+      drawSpeechBubble(b.panel, {
+        text: req.text,
+        name: v.name,
+        tab: tunicCss(req.index),
+        mood: req.mood,
+      });
       this.lastSaid[req.index] = this.clock;
       if (!req.priority) this.gap = GLOBAL_GAP;
     }
@@ -286,39 +304,22 @@ export class SpeechSystem extends createSystem({
         continue;
       }
       e.object3D.getWorldPosition(this.v);
-      const lift = 0.06 * villagerScale(v.age) + 0.03;
+      // The tail tip sits just above the head; the bubble rises from it.
+      const lift = 0.045 * villagerScale(v.age) + 0.008 + BUBBLE_H / 2;
       mesh.position.set(this.v.x, this.v.y + lift, this.v.z);
       mesh.lookAt(this.head);
       // Pop in, then shrink away at the end.
-      const s = Math.min(1, (3.2 - b.left) * 8, b.left * 4);
+      const s = Math.min(1, (b.total - b.left) * 8, b.left * 4);
       mesh.scale.setScalar(Math.max(0.01, s));
       mesh.visible = true;
     }
-  }
-
-  private draw(panel: CanvasPanel, text: string, elder: boolean): void {
-    const ctx = panel.begin();
-    ctx.fillStyle = elder ? UI_COLORS.title : UI_COLORS.text;
-    ctx.font = `700 ${text.length > 26 ? 30 : 36}px ${UI_FONT}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    if (text.length > 26) wrapText(ctx, text, panel.widthPx / 2, 38, panel.widthPx - 40, 34, 2);
-    else ctx.fillText(text, panel.widthPx / 2, panel.heightPx / 2 + 2);
-    ctx.textAlign = 'left';
-    panel.commit();
   }
 
   private updateCaption(delta: number): void {
     const mesh = this.caption.mesh;
     if (speech.narration.length && this.captionLeft < CAPTION_SECONDS - 2) {
       const text = speech.narration.shift()!;
-      const ctx = this.caption.begin();
-      ctx.fillStyle = UI_COLORS.text;
-      ctx.font = `italic 600 34px ${UI_FONT}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, this.caption.widthPx / 2, this.caption.heightPx / 2 + 2, this.caption.widthPx - 40);
-      ctx.textAlign = 'left';
+      ribbon(this.caption.ctx, this.caption.widthPx, this.caption.heightPx, text);
       this.caption.commit();
       this.captionLeft = CAPTION_SECONDS;
     }

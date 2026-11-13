@@ -10,6 +10,8 @@ export interface SpeechRequest {
   seconds: number;
   /** Priority lines (the tutorial elder) skip the rate limits. */
   priority: boolean;
+  /** Sets the bubble's look (ui/bubble.ts). */
+  mood: 'calm' | 'joy' | 'sad' | 'alarm' | 'elder';
 }
 
 export const speech = {
@@ -17,11 +19,17 @@ export const speech = {
   narration: [] as string[],
 };
 
-export function say(index: number, text: string, seconds = 3.2, priority = false): void {
+export function say(
+  index: number,
+  text: string,
+  seconds = 3.2,
+  priority = false,
+  mood: SpeechRequest['mood'] = priority ? 'elder' : 'calm',
+): void {
   if (index < 0) return;
   // Keep the queue short: old chatter is dropped.
   if (speech.requests.length > 6) speech.requests.shift();
-  speech.requests.push({ index, text, seconds, priority });
+  speech.requests.push({ index, text, seconds, priority, mood });
 }
 
 export function narrate(text: string): void {

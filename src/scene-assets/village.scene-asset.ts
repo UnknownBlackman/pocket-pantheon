@@ -20,7 +20,8 @@ export { createDiorama } from './diorama.scene-asset.ts';
 
 // ------------------------------------------------------------------ Villagers
 
-const TUNICS = [0xa8433a, 0x4d6a9a, 0xc9963e, 0x6a8a3e, 0xc8b48c, 0x8a5a3a, 0x7a4a6a, 0x4a7a72];
+/** Tunic colours by villager index (also used for speech-bubble name tabs). */
+export const TUNICS = [0xa8433a, 0x4d6a9a, 0xc9963e, 0x6a8a3e, 0xc8b48c, 0x8a5a3a, 0x7a4a6a, 0x4a7a72];
 const SKINS = [0xe0b48c, 0xc98d62, 0x9a6640, 0x6e4a32];
 const HAIRS = [0x3b2a20, 0x6b4428, 0xc8a050, 0x8a3a20, 0x2a2420];
 
