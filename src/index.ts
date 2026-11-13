@@ -15,7 +15,7 @@ import { HandPresenceSystem } from './ecs/hand-presence-system.js';
 import { PowerSystem } from './ecs/power-system.js';
 import { SaveSystem } from './ecs/save-system.js';
 import { VillageRoot } from './ecs/components.js';
-import { game } from './ecs/game.js';
+import { FRESH_FLAG, game } from './ecs/game.js';
 import { LiftSystem } from './ecs/lift-system.js';
 import { PlacementSystem } from './ecs/placement-system.js';
 import { SimSystem } from './ecs/sim-system.js';
@@ -23,6 +23,17 @@ import { SyncSystem } from './ecs/sync-system.js';
 import { UISystem } from './ecs/ui-system.js';
 import { buildVillage } from './ecs/village-builder.js';
 import { PanelSystem } from './panel.js';
+
+// Shift+F on the flat page: start a brand-new village (for testing and filming).
+window.addEventListener('keydown', (e) => {
+  if (!e.shiftKey || e.key.toLowerCase() !== 'f') return;
+  try {
+    sessionStorage.setItem(FRESH_FLAG, '1');
+    location.reload();
+  } catch {
+    /* storage blocked */
+  }
+});
 
 World.create(
   document.getElementById('scene-container') as HTMLDivElement,

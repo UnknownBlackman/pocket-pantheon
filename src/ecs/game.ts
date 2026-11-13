@@ -29,9 +29,18 @@ export interface GameState {
   presence: GodPresence;
 }
 
-/** `?fresh` in the page URL starts a brand-new village (first-visit tutorial included). */
+/**
+ * A brand-new village (first-visit tutorial included) when the page URL has
+ * `?fresh`, or once after Shift+F on the flat page (see index.ts).
+ */
+export const FRESH_FLAG = 'tabletop-gods-fresh';
+
 function wantsFresh(): boolean {
   try {
+    if (globalThis.sessionStorage?.getItem(FRESH_FLAG)) {
+      globalThis.sessionStorage.removeItem(FRESH_FLAG);
+      return true;
+    }
     return new URLSearchParams(globalThis.location?.search ?? '').has('fresh');
   } catch {
     return false;
