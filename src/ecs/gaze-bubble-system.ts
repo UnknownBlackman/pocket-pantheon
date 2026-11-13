@@ -9,7 +9,7 @@
  * It hides shortly after none of these point at the villager any more.
  */
 import { createSystem, Quaternion, Vector3 } from '@iwsdk/core';
-import type { Entity } from '@iwsdk/core';
+import type { Entity, MeshBasicMaterial } from '@iwsdk/core';
 import { events } from '../core/events.ts';
 import { isDependent } from '../sim/villager.ts';
 import { GESTURES } from '../sim/rules.ts';
@@ -19,7 +19,9 @@ import { CanvasPanel, drawBar, UI_COLORS, UI_FONT } from '../ui/canvas-panel.ts'
 import { VillageRoot, VillagerView } from './components.ts';
 import { game } from './game.ts';
 
-const BUBBLE_ABOVE = 0.075;
+const BUBBLE_ABOVE = 0.085;
+/** About 12 cm wide: readable at arm's length. */
+const BUBBLE_WIDTH = 0.12;
 const REDRAW_EVERY = 0.5;
 
 const ACTIVITY_TEXT: Record<string, string> = {
@@ -56,8 +58,12 @@ export class GazeBubbleSystem extends createSystem({
   private pointDir = new Vector3();
 
   init(): void {
-    this.panel = new CanvasPanel(400, 230, 0.09, 'GazeBubble');
+    this.panel = new CanvasPanel(400, 230, BUBBLE_WIDTH, 'GazeBubble');
     this.panel.mesh.visible = false;
+    // UI: drawn over clouds and scenery so it is never swallowed by them.
+    const mat = this.panel.mesh.material as MeshBasicMaterial;
+    mat.depthTest = false;
+    this.panel.mesh.renderOrder = 40;
     this.bubble = this.world.createTransformEntity(this.panel.mesh, { persistent: true });
   }
 
@@ -78,14 +84,17 @@ export class GazeBubbleSystem extends createSystem({
 
     // Touch beats pointing beats gaze.
     let need: number = 0;
+    let via = 'touch';
     let best = this.pickByTouch();
     if (best < 0) {
       best = this.pickByPointing();
       need = GESTURES.pointDwellSeconds;
+      via = 'pointing';
     }
     if (best < 0) {
       best = this.pickByGaze();
       need = GESTURES.gazeDwellSeconds;
+      via = 'gaze';
     }
 
     if (best >= 0 && best === this.candidate) this.dwell += delta;
@@ -97,7 +106,10 @@ export class GazeBubbleSystem extends createSystem({
       this.shown = best;
       this.redrawIn = 0;
       const v = game.sim.villagers[best];
-      if (v) events.emit('villager.inspected', { villagerId: v.id });
+      if (v) {
+        events.emit('villager.inspected', { villagerId: v.id });
+        console.info(`[bubble] ${v.name} via ${via}`);
+      }
     }
     if (this.shown >= 0 && best !== this.shown) {
       this.linger += delta;
