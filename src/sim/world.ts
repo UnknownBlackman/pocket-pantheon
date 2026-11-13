@@ -19,7 +19,7 @@ const NAMES = [
 ] as const;
 
 /** Fixed layout of the starting village, metres from the centre. */
-const START_BUILDINGS: ReadonlyArray<{ kind: BuildingKind; x: number; z: number }> = [
+export const START_BUILDINGS: ReadonlyArray<{ kind: BuildingKind; x: number; z: number }> = [
   { kind: 'campfire', x: 0, z: 0 },
   { kind: 'shrine', x: 0, z: -0.19 },
   { kind: 'field', x: -0.15, z: 0.14 },

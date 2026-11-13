@@ -10,6 +10,9 @@ import type { Building, BuildingKind, Intent, Villager, World } from './types.ts
 
 const R = RULES;
 
+/** How far from a building's centre villagers stand to use it, metres. */
+const STAND_OFF: Record<BuildingKind, number> = { field: 0.025, hut: 0.046, shrine: 0.048, campfire: 0.045 };
+
 export function isNight(world: World): boolean {
   return world.timeOfDay >= R.session.nightStart;
 }
@@ -82,7 +85,9 @@ export function assignIntent(
     v.targetId = building.id;
     // Stand just off-centre so several villagers do not stack exactly.
     const angle = random(world) * Math.PI * 2;
-    const r = building.kind === 'field' ? 0.025 : 0.035;
+    // Stand around the outside of the model: in a field, by a cottage door,
+    // on the shrine steps, outside the campfire's stone ring.
+    const r = STAND_OFF[building.kind];
     v.target = { x: building.pos.x + Math.cos(angle) * r, z: building.pos.z + Math.sin(angle) * r };
   } else if (intent === 'idle') {
     v.targetId = null;

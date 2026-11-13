@@ -27,3 +27,54 @@ export const PALETTE = {
   tunic: mat(0xd2694a),
   hair: mat(0x3b2a20),
 } as const;
+
+/** Cottage windows: warm light that EffectsSystem/AnimationSystem raises at dusk. */
+export const WINDOW_MAT = new MeshStandardMaterial({
+  color: 0x3a2a18,
+  emissive: 0xffb54a,
+  emissiveIntensity: 0.2,
+  roughness: 0.6,
+  flatShading: true,
+});
+
+/** Chimney smoke puffs (shared; animated by scale, not opacity). */
+export const SMOKE_MAT = new MeshStandardMaterial({
+  color: 0xd8d4cc,
+  transparent: true,
+  opacity: 0.55,
+  roughness: 1,
+  flatShading: true,
+  depthWrite: false,
+});
+
+/** Medieval hamlet palette (sRGB hex), used through the vertex-colour kit. */
+export const HUE = {
+  grass: 0x7fa650,
+  grassDark: 0x5f8a3d,
+  grassLight: 0x9cbf5f,
+  dirt: 0xa8835a,
+  dirtDark: 0x8a6a46,
+  earth: 0x6b4a32,
+  earthDark: 0x4e3626,
+  stone: 0x9a9286,
+  stoneDark: 0x6f675e,
+  stoneLight: 0xb8b0a2,
+  whitewash: 0xe8dcc4,
+  timber: 0x4a3222,
+  thatch: 0xc89b4e,
+  thatchDark: 0xa87d3a,
+  wood: 0x7a5232,
+  woodDark: 0x5a3a22,
+  slate: 0x5f6570,
+  leaves: 0x4f7a34,
+  leavesLight: 0x6a9440,
+  pine: 0x3d6638,
+  trunk: 0x5c3d24,
+  hay: 0xd9b860,
+  water: 0x3f6f8f,
+  iron: 0x3a3a3e,
+  banner: 0xa8322d,
+  gold: 0xe0b54a,
+  cream: 0xf2e6c8,
+  bread: 0xc0874a,
+} as const;

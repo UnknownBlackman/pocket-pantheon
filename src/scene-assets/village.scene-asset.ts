@@ -1,221 +1,407 @@
 /**
- * Procedural low-poly models for the Tabletop Gods village.
+ * Procedural low-poly models for the Tabletop Gods village: a medieval
+ * hamlet built from merged, vertex-coloured, flat-shaded parts (see
+ * lib/kit.ts), one draw call per model where possible.
  *
  * Conventions (all models):
  * - metres; origin at the centre of the ground-contact footprint, +Y up;
- *   "front" faces +Z (towards the player when the village is unrotated);
- * - deterministic and parentless, so they are valid manifest prototypes and
- *   can be cloned at runtime (clones share geometry and materials);
- * - named semantic parts so systems can animate or restyle them.
+ *   "front" faces +Z (the builder turns doors towards the village centre);
+ * - deterministic and parentless, valid as manifest prototypes and cloned at
+ *   runtime (clones share geometry and materials);
+ * - named parts that systems animate: 'Body' (villager pivot), 'Soil' and
+ *   'Crops' (field, children 0 and 1), 'Flame', 'Orb', 'Windows', 'Smoke'.
  */
-import {
-  BoxGeometry,
-  ConeGeometry,
-  CylinderGeometry,
-  Group,
-  IcosahedronGeometry,
-  Mesh,
-  SphereGeometry,
-  TorusGeometry,
-} from '@iwsdk/core';
-import type { BufferGeometry, Material } from '@iwsdk/core';
+import { ConeGeometry, Group, Mesh, SphereGeometry } from '@iwsdk/core';
 import { LAYOUT } from '../sim/rules.ts';
-import { PALETTE } from './village-materials.ts';
+import { Kit, seeded, vary } from './lib/kit.ts';
+import { HUE, PALETTE, SMOKE_MAT, WINDOW_MAT } from './village-materials.ts';
 
-function part(name: string, geometry: BufferGeometry, material: Material): Mesh {
-  const mesh = new Mesh(geometry, material);
-  mesh.name = name;
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
-  return mesh;
-}
+export { createDiorama } from './diorama.scene-asset.ts';
 
-// ------------------------------------------------------------------ Diorama
+// ------------------------------------------------------------------ Villagers
 
-/**
- * Round diorama, 60 cm across with a stone rim. Origin at the bottom centre;
- * the walkable top surface is at y = LAYOUT.baseHeight.
- */
-export function createDiorama(): Group {
-  const root = new Group();
-  root.name = 'Diorama';
-  const r = 0.3;
-  const h = LAYOUT.baseHeight;
-
-  const earth = part('Earth', new CylinderGeometry(r * 0.98, r * 0.94, h, 28, 1), PALETTE.soil);
-  earth.position.y = h / 2;
-  root.add(earth);
-
-  const grass = part('Grass', new CylinderGeometry(r * 0.97, r * 0.97, 0.003, 28, 1), PALETTE.grass);
-  grass.position.y = h - 0.0012;
-  root.add(grass);
-
-  const rim = part('StoneRim', new TorusGeometry(r * 0.985, 0.011, 5, 28), PALETTE.stone);
-  rim.rotation.x = -Math.PI / 2;
-  rim.position.y = h - 0.002;
-  root.add(rim);
-  return root;
-}
-
-// ------------------------------------------------------------------ Villager
+const TUNICS = [0xa8433a, 0x4d6a9a, 0xc9963e, 0x6a8a3e, 0xc8b48c, 0x8a5a3a, 0x7a4a6a, 0x4a7a72];
+const SKINS = [0xe0b48c, 0xc98d62, 0x9a6640, 0x6e4a32];
+const HAIRS = [0x3b2a20, 0x6b4428, 0xc8a050, 0x8a3a20, 0x2a2420];
 
 /**
- * A 4 cm villager. Hierarchy: Villager > Body (squash/stretch pivot at the
- * feet) > Torso, Head, Hair. Body material is the tunic, so systems can tint
- * it per villager by assigning a new material to `Torso`.
+ * A 4 cm villager in medieval dress. Hierarchy: Villager > Body (the
+ * squash/stretch pivot at the feet) > Figure (one merged mesh). `variant`
+ * picks tunic colour, skin, hair and headwear (hood, straw hat or bare).
  */
-export function createVillager(): Group {
+export function createVillager(variant = 0): Group {
+  const tunic = TUNICS[variant % TUNICS.length];
+  const skin = SKINS[(variant * 3 + 1) % SKINS.length];
+  const hair = HAIRS[(variant * 7 + 2) % HAIRS.length];
+  const darker = vary(tunic, () => 0, 0.25); // deterministic darker shade
+  const hose = variant % 2 ? 0x4a3a30 : 0x5a5248;
+  const k = new Kit();
+
+  // Legs and shoes.
+  for (const sx of [-0.0027, 0.0027]) {
+    k.box(0.0032, 0.008, 0.0034, hose, { x: sx, y: 0.004 });
+    k.box(0.0036, 0.0016, 0.0048, HUE.woodDark, { x: sx, y: 0.0008, z: 0.0006 });
+  }
+  // Tunic, belt and buckle.
+  k.cyl(0.0062, 0.0094, 0.017, 7, tunic, { y: 0.0068 });
+  k.cyl(0.0078, 0.0078, 0.0018, 7, HUE.woodDark, { y: 0.0118 });
+  k.box(0.0018, 0.0018, 0.001, HUE.gold, { y: 0.0127, z: 0.0078 });
+  // Arms hanging at the sides, with hands.
+  for (const side of [-1, 1]) {
+    k.bar(side * 0.0066, 0.0225, 0, side * 0.0095, 0.0125, 0.0015, 0.0028, tunic);
+    k.ico(0.0017, skin, { x: side * 0.0097, y: 0.0115, z: 0.0017 });
+  }
+  // Head with a face: eyes and a little nose.
+  k.ico(0.0075, skin, { y: 0.0305 }, 1);
+  for (const ex of [-0.0026, 0.0026]) k.box(0.0012, 0.0014, 0.0008, 0x2a1e18, { x: ex, y: 0.0312, z: 0.0071 });
+  k.box(0.0012, 0.0014, 0.0014, vary(skin, () => 0, 0.12), { y: 0.0296, z: 0.0076 });
+
+  // Headwear.
+  const style = variant % 3;
+  if (style === 0) {
+    // Hood with a short cape over the shoulders.
+    k.add(new SphereGeometry(0.0086, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.62), darker, {
+      y: 0.0312, z: -0.0012, rx: -0.45,
+    });
+    k.cyl(0.0085, 0.0098, 0.0035, 8, darker, { y: 0.0215 });
+  } else if (style === 1) {
+    // Hair under a wide straw hat.
+    k.add(new SphereGeometry(0.0079, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.5), hair, { y: 0.0316 });
+    k.cyl(0.0125, 0.0125, 0.0011, 10, HUE.hay, { y: 0.0352 });
+    k.cyl(0.0058, 0.0068, 0.0045, 8, HUE.hay, { y: 0.0355 });
+    k.cyl(0.0069, 0.0069, 0.0012, 8, HUE.banner, { y: 0.0358 });
+  } else {
+    // Bare head: hair with a little knot at the back.
+    k.add(new SphereGeometry(0.0080, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.55), hair, { y: 0.0314 });
+    k.ico(0.0028, hair, { y: 0.0335, z: -0.0068 });
+  }
+
   const root = new Group();
   root.name = 'Villager';
   const body = new Group();
   body.name = 'Body';
+  body.add(k.mesh('Figure'));
   root.add(body);
-
-  const torso = part('Torso', new CylinderGeometry(0.0065, 0.0105, 0.024, 7, 1), PALETTE.tunic);
-  torso.position.y = 0.012;
-  body.add(torso);
-
-  const head = part('Head', new IcosahedronGeometry(0.0085, 1), PALETTE.skin);
-  head.position.y = 0.0315;
-  body.add(head);
-
-  const hair = part('Hair', new SphereGeometry(0.0088, 7, 4, 0, Math.PI * 2, 0, Math.PI * 0.45), PALETTE.hair);
-  hair.position.y = 0.0325;
-  body.add(hair);
   return root;
 }
 
-// ------------------------------------------------------------------ Buildings
+// ------------------------------------------------------------------ Cottage
 
 /**
- * A 10 cm square field. `Soil` is restyled when dry; `Crops` is a group whose
- * y-scale shows growth (0..1) and whose rows switch to the ripe material.
+ * An 8 cm half-timbered cottage: stone footing, whitewashed walls with dark
+ * beams and braces, a steep thatched gable roof with a stone chimney, a
+ * plank door facing +Z, warm windows ('Windows') and chimney smoke ('Smoke').
+ */
+export function createHut(): Group {
+  const k = new Kit();
+  const W = 0.05; // along X
+  const D = 0.04; // along Z
+  const WH = 0.03; // wall height
+  const F = 0.006; // footing height
+  const top = F + WH;
+
+  // Stone footing and whitewashed walls.
+  k.box(W + 0.005, F, D + 0.005, HUE.stoneDark, { y: F / 2 });
+  for (let i = 0; i < 6; i++) {
+    k.ico(0.0028, HUE.stone, { x: -W / 2 + (i / 5) * W, y: F * 0.6, z: D / 2 + 0.003, sx: 1.4, sy: 0.7 });
+  }
+  k.box(W, WH, D, HUE.whitewash, { y: F + WH / 2 });
+
+  // Timber frame on every face: corner posts, sill and mid rails, braces.
+  const t = 0.0024;
+  const beam = HUE.timber;
+  for (const [fx, fz, len, axis] of [
+    [0, D / 2 + 0.0008, W, 'x'],
+    [0, -D / 2 - 0.0008, W, 'x'],
+    [W / 2 + 0.0008, 0, D, 'z'],
+    [-W / 2 - 0.0008, 0, D, 'z'],
+  ] as const) {
+    const along = (u: number, y: number): [number, number, number] =>
+      axis === 'x' ? [fx + u, y, fz] : [fx, y, fz + u];
+    const h = len / 2;
+    // Rails.
+    for (const y of [F + 0.001, F + WH * 0.5, top - 0.001]) {
+      const a = along(-h, y);
+      const b = along(h, y);
+      k.bar(a[0], a[1], a[2], b[0], b[1], b[2], t, beam);
+    }
+    // Posts.
+    for (const u of [-h, h, axis === 'x' ? -h / 2 : 0, axis === 'x' ? h / 2 : 0]) {
+      const a = along(u, F);
+      const b = along(u, top);
+      k.bar(a[0], a[1], a[2], b[0], b[1], b[2], t, beam);
+    }
+    // Diagonal braces in the lower panels at the ends.
+    const a1 = along(-h, F);
+    const b1 = along(-h / 2, F + WH * 0.5);
+    k.bar(a1[0], a1[1], a1[2], b1[0], b1[1], b1[2], t * 0.85, beam);
+    const a2 = along(h, F);
+    const b2 = along(h / 2, F + WH * 0.5);
+    k.bar(a2[0], a2[1], a2[2], b2[0], b2[1], b2[2], t * 0.85, beam);
+  }
+
+  // Thatched gable roof with a darker ridge and overhanging eaves.
+  k.gable(W + 0.012, 0.03, D + 0.016, HUE.thatch, { y: top });
+  k.box(W + 0.013, 0.003, 0.004, HUE.thatchDark, { y: top + 0.0295 });
+  k.box(W + 0.012, 0.002, 0.002, HUE.thatchDark, { y: top + 0.0004, z: (D + 0.016) / 2 });
+  k.box(W + 0.012, 0.002, 0.002, HUE.thatchDark, { y: top + 0.0004, z: -(D + 0.016) / 2 });
+
+  // Stone chimney through the back slope.
+  const chimney = { x: W * 0.3, z: -D * 0.18 };
+  k.box(0.008, 0.034, 0.008, HUE.stone, { x: chimney.x, y: top + 0.012, z: chimney.z });
+  k.box(0.0095, 0.002, 0.0095, HUE.stoneDark, { x: chimney.x, y: top + 0.029, z: chimney.z });
+
+  // Plank door with a frame and a little step; a bench and a flower box.
+  k.box(0.0115, 0.018, 0.0016, HUE.wood, { y: F + 0.009, z: D / 2 + 0.0012 });
+  k.box(0.0135, 0.0022, 0.002, HUE.timber, { y: F + 0.0185, z: D / 2 + 0.0014 });
+  k.box(0.001, 0.001, 0.001, HUE.gold, { x: 0.0035, y: F + 0.009, z: D / 2 + 0.0022 });
+  k.box(0.016, 0.0025, 0.005, HUE.stoneDark, { y: F * 0.4, z: D / 2 + 0.004 });
+  k.box(0.014, 0.0016, 0.004, HUE.wood, { x: -0.017, y: F + 0.005, z: D / 2 + 0.004 });
+  for (const lx of [-0.023, -0.011]) k.box(0.0014, 0.005, 0.0014, HUE.woodDark, { x: lx, y: F + 0.0025, z: D / 2 + 0.004 });
+  k.box(0.01, 0.003, 0.003, HUE.woodDark, { x: 0.015, y: F + 0.012, z: D / 2 + 0.002 });
+  const rand = seeded(77);
+  for (let i = 0; i < 4; i++) {
+    k.ico(0.0014, i % 2 ? 0xd04a5a : 0xe8c14a, { x: 0.0115 + i * 0.0023, y: F + 0.0145, z: D / 2 + 0.0025 + rand() * 0.001 });
+  }
+
+  // Windows with shutters (the panes glow at dusk).
+  const panes = new Kit();
+  const windowAt: Array<[number, number, number, number]> = [
+    [0.015, F + 0.02, D / 2 + 0.0012, 0],
+    [-W / 2 - 0.0012, F + 0.02, 0, Math.PI / 2],
+    [W / 2 + 0.0012, F + 0.02, 0, Math.PI / 2],
+  ];
+  for (const [x, y, z, ry] of windowAt) {
+    panes.box(0.0075, 0.007, 0.0012, 0xffffff, { x, y, z, ry });
+    const ox = Math.cos(ry) * 0.0055;
+    const oz = -Math.sin(ry) * 0.0055;
+    k.box(0.003, 0.0075, 0.0011, HUE.wood, { x: x + ox, y, z: z + oz, ry });
+    k.box(0.003, 0.0075, 0.0011, HUE.wood, { x: x - ox, y, z: z - oz, ry });
+  }
+
+  const root = new Group();
+  root.name = 'Hut';
+  root.add(k.mesh('Cottage'));
+  root.add(panes.mesh('Windows', WINDOW_MAT));
+
+  // Chimney smoke: three puffs that SyncSystem/AnimationSystem loop upwards.
+  const smoke = new Group();
+  smoke.name = 'Smoke';
+  smoke.position.set(chimney.x, top + 0.031, chimney.z);
+  const puffGeo = new SphereGeometry(0.004, 6, 4);
+  for (let i = 0; i < 3; i++) {
+    const puff = new Mesh(puffGeo, SMOKE_MAT);
+    puff.name = 'Puff';
+    puff.userData.phase = i / 3;
+    smoke.add(puff);
+  }
+  root.add(smoke);
+  return root;
+}
+
+// ------------------------------------------------------------------ Field
+
+/**
+ * A 10 cm field. Children, in order: 'Soil' (restyled when dry), 'Crops'
+ * (y-scale shows growth; rows switch to the ripe material), 'Fence'
+ * (furrows, posts and rails).
  */
 export function createField(): Group {
   const root = new Group();
   root.name = 'Field';
   const s = LAYOUT.fieldSize;
 
-  const soil = part('Soil', new BoxGeometry(s, 0.006, s), PALETTE.soil);
-  soil.position.y = 0.003;
+  const soil = new Mesh(new ConeGeometry(1, 1, 4, 1), PALETTE.soil);
+  // A low, slightly domed plot: a squashed 4-sided pyramid rotated square.
+  soil.geometry.rotateY(Math.PI / 4);
+  soil.scale.set(s * 0.68, 0.007, s * 0.68);
+  soil.position.y = 0.0035;
+  soil.name = 'Soil';
   root.add(soil);
 
   const crops = new Group();
   crops.name = 'Crops';
-  crops.position.y = 0.006;
-  const rowGeo = new BoxGeometry(s * 0.86, 0.012, 0.011);
-  rowGeo.translate(0, 0.006, 0); // grow upward from the soil
+  crops.position.y = 0.004;
+  const rand = seeded(31);
   for (let i = 0; i < 4; i++) {
-    const row = part(`Row${i}`, rowGeo, PALETTE.crop);
-    row.position.z = -s * 0.33 + (i * s * 0.66) / 3;
-    crops.add(row);
+    const row = new Kit();
+    for (let j = 0; j < 9; j++) {
+      const x = -s * 0.4 + (j * s * 0.8) / 8 + (rand() - 0.5) * 0.002;
+      for (let b = 0; b < 3; b++) {
+        row.cone(0.0013, 0.011 + rand() * 0.003, 3, 0xffffff, {
+          x: x + (rand() - 0.5) * 0.003,
+          z: (rand() - 0.5) * 0.003,
+          rx: (rand() - 0.5) * 0.4,
+          rz: (rand() - 0.5) * 0.4,
+        });
+      }
+      row.ico(0.0016, 0xffffff, { x, y: 0.012, z: 0, sy: 1.5 }); // ear of grain
+    }
+    const mesh = row.mesh(`Row${i}`, PALETTE.crop);
+    mesh.position.z = -s * 0.33 + (i * s * 0.66) / 3;
+    crops.add(mesh);
   }
   root.add(crops);
+
+  // Furrows between rows, and a rustic post-and-rail fence on three sides.
+  const k = new Kit();
+  for (let i = 0; i < 5; i++) {
+    const z = -s * 0.44 + (i * s * 0.88) / 4;
+    k.box(s * 0.86, 0.0012, 0.0035, HUE.earthDark, { y: 0.0062, z });
+  }
+  const e = s * 0.5;
+  const posts: Array<[number, number]> = [
+    [-e, -e], [0, -e], [e, -e], [e, 0], [e, e], [-e, 0], [-e, e],
+  ];
+  for (const [x, z] of posts) k.cyl(0.0013, 0.0015, 0.014, 5, HUE.woodDark, { x, y: 0, z });
+  const rail = (ax: number, az: number, bx: number, bz: number) => {
+    k.bar(ax, 0.006, az, bx, 0.007, bz, 0.0012, HUE.wood);
+    k.bar(ax, 0.011, az, bx, 0.0105, bz, 0.0012, HUE.wood);
+  };
+  rail(-e, -e, 0, -e);
+  rail(0, -e, e, -e);
+  rail(e, -e, e, 0);
+  rail(e, 0, e, e);
+  rail(-e, -e, -e, 0);
+  rail(-e, 0, -e, e);
+  root.add(k.mesh('Fence'));
   return root;
 }
 
-/** An 8 cm round hut with a thatched cone roof and a door facing +Z. */
-export function createHut(): Group {
-  const root = new Group();
-  root.name = 'Hut';
-  const w = LAYOUT.hutSize;
+// ------------------------------------------------------------------ Shrine
 
-  const walls = part('Walls', new CylinderGeometry(w * 0.36, w * 0.4, w * 0.42, 9, 1), PALETTE.wall);
-  walls.position.y = w * 0.21;
-  root.add(walls);
-
-  const roof = part('Roof', new ConeGeometry(w * 0.52, w * 0.5, 9, 1), PALETTE.thatch);
-  roof.position.y = w * 0.42 + w * 0.25 - 0.002;
-  root.add(roof);
-
-  const door = part('Door', new BoxGeometry(w * 0.16, w * 0.26, 0.004), PALETTE.door);
-  door.position.set(0, w * 0.13, w * 0.37);
-  root.add(door);
-  return root;
-}
-
-/** A 10 cm shrine: stepped stone base, standing stone and a glowing orb. */
+/**
+ * A 10 cm stone wayside shrine: stepped base, four pillars under a pitched
+ * slate roof, an altar with the glowing 'Orb', candles and small offerings.
+ * The open side faces +Z. `Orb.userData.baseY` is its resting height.
+ */
 export function createShrine(): Group {
+  const k = new Kit();
+  const s = LAYOUT.shrineSize;
+  const rand = seeded(9);
+  k.box(s * 0.82, 0.008, s * 0.82, HUE.stoneDark, { y: 0.004 });
+  k.box(s * 0.62, 0.008, s * 0.62, HUE.stone, { y: 0.012 });
+  // Worn steps in front.
+  k.box(s * 0.3, 0.004, 0.01, HUE.stoneLight, { y: 0.002, z: s * 0.44 });
+
+  const base = 0.016;
+  const ph = 0.04;
+  for (const [x, z] of [[-0.022, -0.02], [0.022, -0.02], [-0.022, 0.018], [0.022, 0.018]]) {
+    k.box(0.0075, 0.003, 0.0075, HUE.stoneDark, { x, y: base + 0.0015, z });
+    k.cyl(0.0032, 0.0036, ph, 6, vary(HUE.stoneLight, rand, 0.05), { x, y: base, z });
+    k.box(0.0075, 0.003, 0.0075, HUE.stoneDark, { x, y: base + ph - 0.0015, z });
+  }
+  // Back wall for shelter, with a little round window.
+  k.box(0.046, ph * 0.85, 0.004, HUE.stone, { y: base + ph * 0.425, z: -0.022 });
+  // Lintel and pitched slate roof.
+  k.box(0.058, 0.005, 0.05, HUE.stoneDark, { y: base + ph + 0.0025 });
+  k.gable(0.064, 0.022, 0.058, HUE.slate, { y: base + ph + 0.005 });
+  k.ico(0.003, HUE.gold, { y: base + ph + 0.029 });
+
+  // Altar.
+  k.box(0.022, 0.012, 0.012, HUE.stoneLight, { y: base + 0.006, z: -0.012 });
+  k.box(0.025, 0.002, 0.014, HUE.stoneDark, { y: base + 0.0125, z: -0.012 });
+
+  // Candles and offerings on the steps.
+  const flames = new Kit();
+  for (const [x, z, h] of [[-0.02, 0.026, 0.006], [0.02, 0.026, 0.008], [0.013, 0.03, 0.005], [-0.012, 0.03, 0.004]]) {
+    k.cyl(0.0012, 0.0013, h, 5, HUE.cream, { x, y: 0.016, z });
+    flames.cone(0.0009, 0.0024, 4, 0xffffff, { x, y: 0.016 + h, z });
+  }
+  k.ico(0.0028, HUE.bread, { x: -0.004, y: 0.0175, z: 0.028, sx: 1.4, sy: 0.7 });
+  k.ico(0.0022, 0xd04a5a, { x: 0.004, y: 0.0172, z: 0.03 });
+  k.ico(0.002, 0xe8c14a, { x: 0.0065, y: 0.0172, z: 0.027 });
+
   const root = new Group();
   root.name = 'Shrine';
-  const s = LAYOUT.shrineSize;
+  root.add(k.mesh('ShrineStone'));
+  const flameMesh = flames.mesh('CandleFlames', PALETTE.flame);
+  root.add(flameMesh);
 
-  const step1 = part('BaseLower', new BoxGeometry(s * 0.8, s * 0.08, s * 0.8), PALETTE.stoneDark);
-  step1.position.y = s * 0.04;
-  root.add(step1);
-
-  const step2 = part('BaseUpper', new BoxGeometry(s * 0.55, s * 0.08, s * 0.55), PALETTE.stone);
-  step2.position.y = s * 0.12;
-  root.add(step2);
-
-  const pillar = part('Pillar', new CylinderGeometry(s * 0.1, s * 0.15, s * 0.5, 6, 1), PALETTE.stone);
-  pillar.position.y = s * 0.16 + s * 0.25;
-  root.add(pillar);
-
-  const orb = part('Orb', new IcosahedronGeometry(s * 0.11, 1), PALETTE.glow);
-  orb.position.y = s * 0.16 + s * 0.5 + s * 0.12;
+  const orb = new Mesh(new SphereGeometry(0.0075, 12, 8), PALETTE.glow);
+  orb.name = 'Orb';
+  const orbY = base + 0.0135 + 0.009;
+  orb.position.set(0, orbY, -0.012);
+  orb.userData.baseY = orbY;
   root.add(orb);
   return root;
 }
 
-/** A 10 cm campfire: ring of stones, crossed logs and a flame. */
+// ------------------------------------------------------------------ Campfire
+
+/**
+ * A 10 cm campfire: a ring of stones round an ash bed, crossed logs, a
+ * cooking pot on a tripod, log benches around it and the 'Flame' (pivot at
+ * its base so it can flicker in y-scale).
+ */
 export function createCampfire(): Group {
+  const k = new Kit();
+  const rand = seeded(5);
+  k.cyl(0.026, 0.026, 0.0008, 10, 0x4a4440, {});
+  for (let i = 0; i < 11; i++) {
+    const a = (i / 11) * Math.PI * 2;
+    k.ico(0.0055 + rand() * 0.0015, vary(HUE.stone, rand, 0.12), {
+      x: Math.cos(a) * 0.029, y: 0.003, z: Math.sin(a) * 0.029, sx: 1.2, sy: 0.75, ry: -a,
+    });
+  }
+  // Teepee of logs.
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    k.bar(Math.cos(a) * 0.015, 0.001, Math.sin(a) * 0.015, Math.cos(a) * 0.003, 0.016, Math.sin(a) * 0.003, 0.003, i % 2 ? HUE.wood : HUE.woodDark);
+  }
+  // Tripod and pot.
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 0.5;
+    k.bar(Math.cos(a) * 0.034, 0, Math.sin(a) * 0.034, 0, 0.05, 0, 0.0014, HUE.woodDark);
+  }
+  k.bar(0, 0.05, 0, 0, 0.034, 0, 0.0006, HUE.iron);
+  k.cyl(0.0085, 0.006, 0.009, 9, HUE.iron, { y: 0.025 });
+  k.cyl(0.0088, 0.0088, 0.0012, 9, 0x2a2a2e, { y: 0.0335 });
+  // Log benches.
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 1.05;
+    k.cyl(0.0035, 0.0035, 0.026, 7, HUE.wood, {
+      x: Math.cos(a) * 0.062, y: 0.0035, z: Math.sin(a) * 0.062, rx: Math.PI / 2, rz: 0, ry: -a + Math.PI / 2,
+    });
+  }
+
   const root = new Group();
   root.name = 'Campfire';
-  const s = LAYOUT.campfireSize;
+  root.add(k.mesh('FirePit'));
 
-  const ring = part('StoneRing', new TorusGeometry(s * 0.36, s * 0.07, 4, 9), PALETTE.stoneDark);
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = s * 0.04;
-  root.add(ring);
-
-  const logGeo = new CylinderGeometry(s * 0.04, s * 0.04, s * 0.5, 5, 1);
-  logGeo.rotateZ(Math.PI / 2);
-  const logA = part('LogA', logGeo, PALETTE.wood);
-  logA.position.y = s * 0.05;
-  logA.rotation.y = Math.PI / 4;
-  root.add(logA);
-  const logB = part('LogB', logGeo, PALETTE.wood);
-  logB.position.y = s * 0.09;
-  logB.rotation.y = -Math.PI / 4;
-  root.add(logB);
-
-  const flameGeo = new ConeGeometry(s * 0.13, s * 0.32, 6, 1);
-  flameGeo.translate(0, s * 0.16, 0); // pivot at the base so it can flicker in y-scale
-  const flame = part('Flame', flameGeo, PALETTE.flame);
-  flame.position.y = s * 0.08;
+  const flameGeo = new ConeGeometry(0.011, 0.03, 6, 1);
+  flameGeo.translate(0, 0.015, 0); // pivot at the base
+  const flame = new Mesh(flameGeo, PALETTE.flame);
+  flame.name = 'Flame';
+  flame.position.y = 0.004;
   root.add(flame);
   return root;
 }
 
+// ------------------------------------------------------------------ Tablet
+
 /**
- * A 9 cm stone tablet with carved lines, standing on a low plinth; its face
- * is +Z. Poking it opens the chronicle of past sessions.
+ * A 9 cm stone tablet with carved lines and creeping moss, standing on a
+ * low plinth; its face is +Z. Poking it opens the chronicle.
  */
 export function createTablet(): Group {
+  const k = new Kit();
+  k.box(0.06, 0.008, 0.026, HUE.stoneDark, { y: 0.004 });
+  k.box(0.05, 0.075, 0.012, HUE.stone, { y: 0.008 + 0.0375, rx: -0.08 });
+  k.ico(0.02, HUE.stone, { y: 0.082, z: -0.003, sx: 1.25, sy: 0.45, sz: 0.3 }); // rounded top
+  for (let i = 0; i < 5; i++) {
+    k.box(i === 4 ? 0.02 : 0.034, 0.003, 0.002, HUE.stoneDark, {
+      y: 0.008 + 0.0375 + 0.024 - i * 0.012, z: 0.0062 + i * 0.001, rx: -0.08,
+    });
+  }
+  const rand = seeded(13);
+  for (let i = 0; i < 6; i++) {
+    k.ico(0.003 + rand() * 0.002, vary(HUE.grassDark, rand, 0.1), {
+      x: -0.022 + rand() * 0.01, y: 0.01 + rand() * 0.02, z: 0.005, sz: 0.5,
+    });
+  }
   const root = new Group();
   root.name = 'Tablet';
-
-  const plinth = part('Plinth', new BoxGeometry(0.06, 0.008, 0.026), PALETTE.stoneDark);
-  plinth.position.y = 0.004;
-  root.add(plinth);
-
-  const slab = part('Slab', new BoxGeometry(0.05, 0.075, 0.012), PALETTE.stone);
-  slab.position.y = 0.008 + 0.0375;
-  slab.rotation.x = -0.08; // leans back slightly
-  root.add(slab);
-
-  const lineGeo = new BoxGeometry(0.034, 0.003, 0.002);
-  const lines = new Group();
-  lines.name = 'Carving';
-  lines.position.set(0, 0.008 + 0.0375, 0.0062);
-  lines.rotation.x = -0.08;
-  for (let i = 0; i < 5; i++) {
-    const line = part(`Line${i}`, lineGeo, PALETTE.stoneDark);
-    line.position.y = 0.024 - i * 0.012;
-    line.scale.x = i === 4 ? 0.6 : 1;
-    lines.add(line);
-  }
-  root.add(lines);
+  root.add(k.mesh('TabletStone'));
   return root;
 }

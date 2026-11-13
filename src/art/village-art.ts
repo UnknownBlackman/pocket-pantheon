@@ -2,13 +2,7 @@
  * Runtime art helpers: clones of the manifest model prototypes (sharing
  * geometry and materials), soft blob shadows and per-villager tunic colours.
  */
-import {
-  CanvasTexture,
-  CircleGeometry,
-  Mesh,
-  MeshBasicMaterial,
-  MeshStandardMaterial,
-} from '@iwsdk/core';
+import { CanvasTexture, CircleGeometry, Mesh, MeshBasicMaterial } from '@iwsdk/core';
 import type { Group, Object3D } from '@iwsdk/core';
 import type { BuildingKind } from '../sim/types.ts';
 import {
@@ -20,7 +14,6 @@ import {
   createTablet,
   createVillager,
 } from '../scene-assets/village.scene-asset.js';
-import { PALETTE } from '../scene-assets/village-materials.js';
 
 type Factory = () => Group;
 const prototypes = new Map<string, Group>();
@@ -42,10 +35,9 @@ export function makeTablet(): Group {
   return g;
 }
 
+/** Each villager index gets its own look (tunic, skin, hair, headwear). */
 export function makeVillager(index: number): Group {
-  const g = cloneOf('villager', createVillager);
-  const torso = g.getObjectByName('Torso') as Mesh | undefined;
-  if (torso) torso.material = tunicMaterial(index);
+  const g = cloneOf(`villager-${index}`, () => createVillager(index));
   g.add(makeBlobShadow(0.024));
   return g;
 }
@@ -69,21 +61,6 @@ export function makeBuilding(kind: BuildingKind): Group {
   const size = SHADOW_SIZE[kind];
   if (size > 0) g.add(makeBlobShadow(size));
   return g;
-}
-
-// ------------------------------------------------------------------ Tunics
-
-const TUNIC_COLORS = [0xd2694a, 0x4a8bd2, 0xd2b04a, 0x7bbf5a, 0xb05ad2, 0x4ac2b5, 0xe0884a, 0x9a6a4a];
-const tunics: MeshStandardMaterial[] = [];
-
-function tunicMaterial(index: number): MeshStandardMaterial {
-  const i = index % TUNIC_COLORS.length;
-  if (!tunics[i]) {
-    const m = PALETTE.tunic.clone();
-    m.color.setHex(TUNIC_COLORS[i]);
-    tunics[i] = m;
-  }
-  return tunics[i];
 }
 
 // ------------------------------------------------------------------ Blob shadows
