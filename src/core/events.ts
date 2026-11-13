@@ -27,6 +27,13 @@ export interface GameEvents {
   'hideseek.found': { count: number };
   'god.waved': Record<string, never>;
   'god.cheered': Record<string, never>;
+  'villager.born': { villagerId: string; index: number; name: string; parents: string[] };
+  'villager.died': { villagerId: string; index: number; name: string; cause: string; age: number };
+  'villager.hurt': { villagerId: string };
+  lightning: { x: number; z: number };
+  'storm.swatted': { cloud: number };
+  'storm.calmed': Record<string, never>;
+  'guide.step': { step: string };
 }
 
 export type GameEventName = keyof GameEvents;

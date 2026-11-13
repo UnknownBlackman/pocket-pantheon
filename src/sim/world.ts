@@ -6,17 +6,16 @@ import type { EventBus } from '../core/events.ts';
 import { addChronicle } from './chronicle.ts';
 import { clamp01 } from './math.ts';
 import { pick, random, randomRange } from './random.ts';
-import { RULES } from './rules.ts';
+import { LIFE, RULES } from './rules.ts';
 import type { Building, BuildingKind, Villager, Weather, World } from './types.ts';
+import { endOfYear, updateLife } from './life.ts';
+import { initStorm, updateStorm } from './storm.ts';
 import { divineTitle } from './title.ts';
 import { updateVillager } from './villager.ts';
 
 const R = RULES;
 
-const NAMES = [
-  'Ama', 'Bode', 'Cira', 'Dayo', 'Eshe', 'Femi', 'Gita', 'Haru',
-  'Ines', 'Jide', 'Kemi', 'Lio', 'Mira', 'Nnamdi', 'Oya', 'Pele',
-] as const;
+import { NAMES } from './names.ts';
 
 /** Fixed layout of the starting village, metres from the centre. */
 export const START_BUILDINGS: ReadonlyArray<{ kind: BuildingKind; x: number; z: number }> = [
@@ -72,6 +71,12 @@ export function makeVillager(world: World, index: number): Villager {
     prayProgress: 0,
     blessed: 0,
     ...freshPresenceFields(),
+    age: Math.round(randomRange(world, LIFE.startAgeMin, LIFE.startAgeMax)),
+    dead: false,
+    deathCause: null,
+    parents: [],
+    limp: 0,
+    starving: 0,
   };
 }
 
@@ -125,6 +130,11 @@ export function createWorld(seed = 1): World {
     stats: freshStats(),
     totals: { harvests: 0, prayers: 0, storms: 0 },
     tutorialDone: [],
+    graves: [],
+    stormClouds: [],
+    stormRegrow: [],
+    // The guided tutorial is started by the game on a first visit (sim/tutorial.ts).
+    guide: { step: 'none', active: false },
     eclipse: false,
     sessionCounts: freshSessionCounts(),
     title: '',
@@ -139,6 +149,8 @@ export function createWorld(seed = 1): World {
   for (let i = 0; i < R.village.startVillagers; i++) {
     world.villagers.push(makeVillager(world, i));
   }
+  // Ama is the village elder: she guides the new god through the old ways.
+  world.villagers[0].age = LIFE.elderAge;
   const avg = averageBeliefs(world);
   world.sessionStart = { faith: avg.faith, initiative: avg.initiative };
   addChronicle(world, 'dawn', { villagers: world.villagers.length });
@@ -154,12 +166,15 @@ export function averageBeliefs(world: World): { faith: number; initiative: numbe
   let faith = 0;
   let initiative = 0;
   let mood = 0;
-  const n = world.villagers.length || 1;
+  let n = 0;
   for (const v of world.villagers) {
+    if (v.dead) continue;
+    n++;
     faith += v.beliefs.faith;
     initiative += v.beliefs.initiative;
     mood += v.mood;
   }
+  n ||= 1;
   return { faith: faith / n, initiative: initiative / n, mood: mood / n };
 }
 
@@ -167,11 +182,14 @@ export function averageBeliefs(world: World): { faith: number; initiative: numbe
 export function duskScore(world: World): { score: number; stars: number } {
   let balance = 0;
   let mood = 0;
-  const n = world.villagers.length || 1;
+  let n = 0;
   for (const v of world.villagers) {
+    if (v.dead) continue;
+    n++;
     balance += 1 - Math.abs(v.beliefs.faith - v.beliefs.initiative);
     mood += v.mood;
   }
+  n ||= 1;
   const score = clamp01((balance / n + mood / n) / 2);
   return { score, stars: 1 + Math.round(score * 4) };
 }
@@ -189,6 +207,7 @@ export function setWeather(world: World, weather: Weather, bus?: EventBus): void
   if (weather === 'drought') addChronicle(world, 'drought', {}, [], bus);
   if (weather === 'storm') {
     world.totals.storms += 1;
+    initStorm(world);
     addChronicle(world, 'storm', {}, [], bus);
   }
   bus?.emit('weather.changed', { weather });
@@ -201,9 +220,12 @@ function endOfDay(world: World, bus?: EventBus): void {
   if (world.weather === 'storm') {
     addChronicle(world, 'storm-survived', { panics: s.panics }, [], bus);
   }
+  // A year passes: ageing, coming of age, old age, and perhaps a birth.
+  endOfYear(world, makeVillager, bus);
   // Passive drift when the god stayed away all day.
   if (s.interventions === 0) {
     for (const v of world.villagers) {
+      if (v.dead) continue;
       v.beliefs.faith = clamp01(v.beliefs.faith + R.beliefs.driftFaithPerDay);
       v.beliefs.initiative = clamp01(v.beliefs.initiative + R.beliefs.driftInitiativePerDay);
     }
@@ -301,7 +323,8 @@ function updateEffects(world: World, dt: number): void {
 export function tick(world: World, dt: number, bus?: EventBus): void {
   if (world.phase === 'ended') return;
 
-  if (world.phase === 'day') {
+  // The guided tutorial holds the clock: no days pass while the elder teaches.
+  if (world.phase === 'day' && !world.guide.active) {
     world.timeOfDay += dt / dayLength(world);
     if (world.timeOfDay >= 1) {
       endOfDay(world, bus);
@@ -319,8 +342,10 @@ export function tick(world: World, dt: number, bus?: EventBus): void {
   }
 
   updateEffects(world, dt);
+  updateStorm(world, dt);
   updateBuildings(world, dt, bus);
   for (const v of world.villagers) updateVillager(world, v, dt, bus);
+  updateLife(world, dt, bus);
   world.favor = Math.min(R.favor.max, Math.max(0, world.favor));
   world.food = Math.min(100, Math.max(0, world.food));
 }

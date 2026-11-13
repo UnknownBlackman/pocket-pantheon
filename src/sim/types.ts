@@ -21,14 +21,18 @@ export type Activity =
   | 'climb' // walking to and hopping onto an open palm
   | 'ride' // sitting on the god's palm
   | 'fall' // tumbling off the palm
-  | 'hide'; // hiding behind the god's resting hand
+  | 'hide' // hiding behind the god's resting hand
+  // Life and death (sim/life.ts):
+  | 'play' // children at play
+  | 'mourn' // standing in grief for someone who died
+  | 'dead';
 
 export type RideState = 'none' | 'climb' | 'ride' | 'fall';
 export type HideState = 'none' | 'going' | 'hiding';
 export type HandSide = 'left' | 'right';
 
 /** What the villager is trying to do; `activity` is what they are doing right now. */
-export type Intent = 'idle' | 'farm' | 'rest' | 'pray' | 'gather';
+export type Intent = 'idle' | 'farm' | 'rest' | 'pray' | 'gather' | 'play';
 
 export type ChronicleRef = { entryIndex: number };
 
@@ -77,6 +81,26 @@ export interface Villager {
   /** Hide-and-seek behind the god's resting hand. */
   hide: HideState;
   hideTime: number;
+
+  /** Age in years (one game day is one year); children are under LIFE.adultAge. */
+  age: number;
+  dead: boolean;
+  deathCause: DeathCause | null;
+  /** Parent ids for children born in the village. */
+  parents: string[];
+  /** Seconds of limping left (injured by the god's hand). */
+  limp: number;
+  /** Seconds spent at full hunger; starving too long is fatal. */
+  starving: number;
+}
+
+export type DeathCause = 'old age' | 'starvation' | 'lightning';
+
+export interface Grave {
+  name: string;
+  age: number;
+  cause: DeathCause;
+  day: number;
 }
 
 /** What the god did this session, for the divine title at dusk. */
@@ -152,6 +176,14 @@ export interface World {
   stats: DayStats;
   /** Totals over the whole save, for milestones like "first harvest". */
   totals: { harvests: number; prayers: number; storms: number };
+  /** The dead, in order, for the graveyard and the chronicle. */
+  graves: Grave[];
+  /** Storm clouds over the village: 1 present, 0 swatted away (sim/storm.ts). */
+  stormClouds: number[];
+  /** Seconds until each swatted cloud regrows. */
+  stormRegrow: number[];
+  /** First-visit guided tutorial (sim/tutorial.ts). */
+  guide: { step: string; active: boolean };
   /** True while the god's hand darkens three or more villagers (they kneel). */
   eclipse: boolean;
   /** This session's interventions, reset each session. */

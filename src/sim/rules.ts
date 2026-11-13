@@ -24,7 +24,11 @@ export const RULES = {
 
   village: {
     startVillagers: 8,
-    maxVillagers: 12,
+    /**
+     * Population cap, children included. Beyond this a 60 cm village gets
+     * crowded, pinching picks the wrong villager and stories blur together.
+     */
+    maxVillagers: 14,
     startFields: 3,
     startHuts: 3,
     startShrines: 1,
@@ -322,4 +326,57 @@ export const WAVE = {
   minHeight: 0.12,
   /** Raised hands: palms this far above eye level (negative = below). */
   raisedAboveEye: -0.05,
+} as const;
+
+/** Life and death (sim/life.ts). Ages are in years; one game day is one year. */
+export const LIFE = {
+  startAgeMin: 16,
+  startAgeMax: 45,
+  /** The village elder (Ama, who guides the tutorial) starts this old. */
+  elderAge: 58,
+  /** Children become adults at this age. */
+  adultAge: 13,
+  /** Children are drawn at this scale when newborn, growing to full size at adultAge. */
+  childScaleMin: 0.6,
+  /** Children walk this much faster when playing. */
+  childPlaySpeed: 1.3,
+  /** Children eat from the village stock wherever they are. */
+  childEatPerSecond: 0.012,
+  /** From this age the chance of dying of old age each year grows by oldAgeChancePerYear. */
+  oldAgeFrom: 58,
+  oldAgeChancePerYear: 0.05,
+  /** Births happen at day's end when the stock has this much food. */
+  birthFood: 45,
+  birthChance: 0.55,
+  /** A villager starving (hunger at 1) this long dies. */
+  starveSeconds: 45,
+  /** Chance per second that lightning strikes an unsheltered villager at full storm. */
+  lightningPerSecond: 0.0015,
+  /** Injuries from the god's hand: a daze, then a limp at half speed. */
+  limpSeconds: 30,
+  limpSpeed: 0.5,
+  /** Dropping a pinched villager from higher than this above the table hurts them. */
+  hurtDropHeight: 0.12,
+  /** Mourners pause for this long. */
+  mournSeconds: 5,
+  mournRadius: 0.2,
+  /** Faith lost by everyone when someone dies of starvation or lightning. */
+  neglectFaith: -0.02,
+} as const;
+
+/** The storm and swatting it away (sim/storm.ts). */
+export const STORM = {
+  /** Little storm clouds over the village. */
+  clouds: 9,
+  cloudRing: 0.11,
+  cloudHeight: 0.16,
+  cloudRadius: 0.02,
+  /** Swatting a cloud costs this much Favor. */
+  swatCost: 0.25,
+  /** The hand must pass this fast (m/s) through a cloud to scatter it. */
+  swatSpeed: 0.3,
+  /** A scattered cloud regrows after this long. */
+  regrowSeconds: 14,
+  calmFaith: 0.02,
+  calmInitiative: -0.01,
 } as const;

@@ -37,6 +37,19 @@ export function deserializeWorld(json: string): World | null {
     w.eclipse = false;
     w.sessionCounts ??= freshSessionCounts();
     w.title ??= '';
+    w.graves ??= [];
+    w.stormClouds ??= [];
+    w.stormRegrow ??= [];
+    // Saves from before the guided tutorial: those players already know the game.
+    w.guide ??= { step: 'done', active: false };
+    for (const v of w.villagers) {
+      v.age ??= 30;
+      v.dead ??= false;
+      v.deathCause ??= null;
+      v.parents ??= [];
+      v.limp ??= 0;
+      v.starving ??= 0;
+    }
     // Nobody is mid-ride or mid-hide after a reload.
     for (const v of w.villagers) Object.assign(v, freshPresenceFields());
     return w as World;

@@ -5,7 +5,8 @@ import type { EventBus } from '../core/events.ts';
 import { addChronicle } from './chronicle.ts';
 import { clamp, clamp01, clampToDisc, dist, stepTowards } from './math.ts';
 import { random, randomRange } from './random.ts';
-import { RULES } from './rules.ts';
+import { LIFE, RULES } from './rules.ts';
+import { stormStrength } from './storm.ts';
 import type { Building, BuildingKind, Intent, Villager, World } from './types.ts';
 
 const R = RULES;
@@ -108,11 +109,45 @@ export function assignIntent(
   }
 }
 
+/** Children (under LIFE.adultAge) never farm or pray: they rest or play near family. */
+export const childOf = (v: Villager): boolean => v.age < LIFE.adultAge;
+
+function decideChild(world: World, v: Villager): void {
+  if (isNight(world) || v.needs.fatigue > 0.6) {
+    if (v.intent !== 'rest') {
+      const hut = buildingById(world, v.homeId) ?? nearestOfKind(world, v, 'hut');
+      assignIntent(world, v, 'rest', hut, R.decisions.minCommitSeconds);
+    }
+    return;
+  }
+  if (v.intent === 'play' && v.target) return;
+  // Play near a parent (or the campfire): run to a spot, hop about, run again.
+  let anchor: Villager | undefined;
+  for (const o of world.villagers) {
+    if (!o.dead && v.parents.includes(o.id)) {
+      anchor = o;
+      break;
+    }
+  }
+  const cx = anchor ? anchor.pos.x : 0;
+  const cz = anchor ? anchor.pos.z : 0;
+  v.intent = 'play';
+  v.targetId = null;
+  v.commit = 2;
+  const t = { x: cx + randomRange(world, -0.05, 0.05), z: cz + randomRange(world, -0.05, 0.05) };
+  clampToDisc(t, R.village.radius * 0.85);
+  v.target = t;
+}
+
 /** The decision rule: score each candidate action and pick the highest. */
 export function decide(world: World, v: Villager): void {
   if (world.phase !== 'day') {
     const fire = nearestOfKind(world, v, 'campfire');
     if (v.intent !== 'gather') assignIntent(world, v, 'gather', fire, Infinity);
+    return;
+  }
+  if (childOf(v)) {
+    decideChild(world, v);
     return;
   }
 
@@ -143,7 +178,7 @@ export function decide(world: World, v: Villager): void {
 
   const stick = R.decisions.stickiness;
   const scores: Record<'idle' | 'farm' | 'rest' | 'pray', number> = { idle, farm, rest, pray };
-  if (v.intent !== 'gather') scores[v.intent] += stick;
+  if (v.intent !== 'gather' && v.intent !== 'play') scores[v.intent] += stick;
 
   let intent: Intent = 'idle';
   let best = scores.idle;
@@ -223,6 +258,10 @@ function doWork(world: World, v: Villager, dt: number, bus?: EventBus): void {
       accumulatePrayer(world, v, dt);
       break;
     }
+    case 'play': {
+      v.activity = 'play';
+      break;
+    }
     case 'gather': {
       v.activity = world.phase === 'dusk' ? 'cheer' : 'idle';
       break;
@@ -254,6 +293,7 @@ function startPanic(world: World, v: Villager, bus?: EventBus): void {
 
 /** Advance one villager by dt seconds. */
 export function updateVillager(world: World, v: Villager, dt: number, bus?: EventBus): void {
+  if (v.dead) return;
   if (v.carried) {
     updateMood(v);
     return;
@@ -270,6 +310,12 @@ export function updateVillager(world: World, v: Villager, dt: number, bus?: Even
       (night ? R.needs.fatiguePerSecondNight : R.needs.fatiguePerSecond) * dt,
   );
   if (v.blessed > 0) v.blessed = Math.max(0, v.blessed - dt);
+  // Children eat from the village stock wherever they are.
+  if (childOf(v) && world.food > 0 && v.needs.hunger > 0.25) {
+    const eat = Math.min(v.needs.hunger, LIFE.childEatPerSecond * dt, world.food / R.farming.foodPerHunger);
+    v.needs.hunger -= eat;
+    world.food = Math.max(0, world.food - eat * R.farming.foodPerHunger);
+  }
 
   // Riding the god's palm or hiding behind the god's hand: sim/presence.ts
   // moves them; only their needs advance here.
@@ -304,7 +350,7 @@ export function updateVillager(world: World, v: Villager, dt: number, bus?: Even
     return;
   }
   if (!sheltered && world.phase === 'day') {
-    if (world.weather === 'storm' && random(world) < R.weather.stormPanicChance * dt) {
+    if (world.weather === 'storm' && random(world) < R.weather.stormPanicChance * stormStrength(world) * dt) {
       startPanic(world, v, bus);
       updateMood(v);
       return;
@@ -331,7 +377,9 @@ export function updateVillager(world: World, v: Villager, dt: number, bus?: Even
 
   // Movement then work.
   if (v.target) {
-    const arrived = stepTowards(v.pos, v.target, R.village.walkSpeed * dt);
+    const pace =
+      (v.limp > 0 ? LIFE.limpSpeed : 1) * (childOf(v) && v.intent === 'play' ? LIFE.childPlaySpeed : 1);
+    const arrived = stepTowards(v.pos, v.target, R.village.walkSpeed * pace * dt);
     if (!arrived) {
       v.activity = 'walk';
     } else {

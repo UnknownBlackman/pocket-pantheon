@@ -1,87 +1,209 @@
 /**
- * The first-five-minutes tutorial, driven by what the player does, not by
- * timers. Each step shows a hint until the player performs it; Rain waits
- * for the drought and Shelter for the storm. Pure code, no XR.
+ * The first-visit guided tutorial. Elder Ama leads the new god through
+ * everything the village can do, one step at a time; each step waits for
+ * the player to do it. While it runs the day clock is held (sim/world.ts),
+ * nobody starves or is struck by lightning, and each power step tops up
+ * Favor so the player cannot fail for lack of it. The rain step dries a
+ * field on purpose; the shelter and swat steps bring a practice storm.
+ * Pure simulation code.
  */
-import type { World } from './types.ts';
+import type { EventBus } from '../core/events.ts';
+import { addChronicle } from './chronicle.ts';
+import { initStorm } from './storm.ts';
+import type { Building, Villager, World } from './types.ts';
+import { setWeather } from './world.ts';
 
-export type TutorialStep = 'lift' | 'bless' | 'gaze' | 'ride' | 'rain' | 'shelter';
-export const TUTORIAL_STEPS: readonly TutorialStep[] = ['lift', 'bless', 'gaze', 'ride', 'rain', 'shelter'];
+export type GuideStepId =
+  | 'welcome'
+  | 'lift'
+  | 'bless'
+  | 'ride'
+  | 'rain'
+  | 'shelter'
+  | 'swat'
+  | 'wave'
+  | 'pause';
 
-export interface Hint {
-  step: TutorialStep | 'complete';
+export type GuideTarget = 'elder' | 'field' | 'dry-field' | 'edge' | 'village' | 'none';
+
+export interface GuideStep {
+  id: GuideStepId;
   title: string;
   body: string;
+  /** What Elder Ama says. */
+  elder: string;
+  target: GuideTarget;
 }
 
-const HINTS: Record<TutorialStep, Omit<Hint, 'step'>> = {
-  lift: {
-    title: 'Lift a villager',
-    body: 'Pinch a villager, carry them and let go over a field, a hut or the shrine.',
+export const GUIDE: readonly GuideStep[] = [
+  {
+    id: 'welcome',
+    title: 'Meet Elder Ama',
+    body: 'Look at Ama (or point at her) for a moment to see how she feels.',
+    elder: 'Welcome, great one! Look upon me.',
+    target: 'elder',
   },
-  bless: {
-    title: 'Bless your people',
-    body: 'Point one finger at a villager or building and hold until the ring fills. It costs 1 Favor (the gold gems).',
+  {
+    id: 'lift',
+    title: 'Carry a villager',
+    body: 'Pinch a villager, carry them, and let go over the glowing field.',
+    elder: 'Carry one of us to the field. We will work it.',
+    target: 'field',
   },
-  gaze: {
-    title: 'See how they feel',
-    body: 'Look at a villager for a moment to see their hunger, tiredness, Faith and Initiative.',
+  {
+    id: 'bless',
+    title: 'Bless someone',
+    body: 'Point one finger at a villager and hold it there until the ring fills.',
+    elder: 'A blessing gives us strength. Touch one of us.',
+    target: 'elder',
   },
-  ride: {
-    title: 'Let them climb aboard',
-    body: 'Rest your open hand, palm up, beside the village and keep it still. Lift it to carry them; tilt it and they tumble.',
+  {
+    id: 'ride',
+    title: 'Let them ride',
+    body: 'Rest your open hand, palm up, at the glowing edge and keep it still.',
+    elder: 'May we climb upon your hand?',
+    target: 'edge',
   },
-  rain: {
-    title: 'The fields are drying!',
-    body: 'Hold your open hand flat, palm down, a hand-width above a field.',
+  {
+    id: 'rain',
+    title: 'Rain on the dry field',
+    body: 'This field is parched. Hold your open hand flat, palm down, above it.',
+    elder: 'The soil cracks! Send rain, we beg you.',
+    target: 'dry-field',
   },
-  shelter: {
-    title: 'A storm is coming!',
-    body: 'Hold both palms down over the village, or one palm over open ground, to shelter them.',
+  {
+    id: 'shelter',
+    title: 'Shelter us',
+    body: 'A storm! Hold both palms down over the village, or one palm over open ground.',
+    elder: 'Dark clouds! Protect us!',
+    target: 'village',
   },
-};
+  {
+    id: 'swat',
+    title: 'Sweep the storm away',
+    body: 'Swat the little clouds with quick sweeps of your hand. Each costs a little Favor.',
+    elder: 'Now drive the clouds away!',
+    target: 'village',
+  },
+  {
+    id: 'wave',
+    title: 'Say hello',
+    body: 'Wave your open hand from side to side above the village.',
+    elder: 'Wave to us, so all may see you!',
+    target: 'none',
+  },
+  {
+    id: 'pause',
+    title: 'Rest when you need to',
+    body: 'Hold both palms towards your face at chest height to pause. Poke Resume to carry on.',
+    elder: 'When you must rest, show us your palms.',
+    target: 'none',
+  },
+];
 
-const COMPLETE: Hint = {
-  step: 'complete',
-  title: 'They are yours to guide',
-  body: 'Help too much and they wait for you. Stay away and they stop believing. Find the balance.',
-};
+export type GuideEvent =
+  | { kind: 'inspected' }
+  | { kind: 'dropped'; building: string | null }
+  | { kind: 'power'; power: 'bless' | 'rain' | 'shelter' }
+  | { kind: 'climbed' }
+  | { kind: 'calmed' }
+  | { kind: 'waved' }
+  | { kind: 'paused' };
 
-export function isStepDone(world: World, step: TutorialStep): boolean {
-  return world.tutorialDone.includes(step);
+/** Favor the god is given for each step that needs a power. */
+const PRACTICE_FAVOR = 6;
+
+export function guideStep(world: World): GuideStep | null {
+  if (!world.guide.active) return null;
+  return GUIDE.find((s) => s.id === world.guide.step) ?? null;
 }
 
-/** Marks a step done. Returns true when this call completed it. */
-export function completeStep(world: World, step: TutorialStep): boolean {
-  if (isStepDone(world, step)) return false;
-  world.tutorialDone.push(step);
-  return true;
+/** The elder who guides: Ama if she lives, else the oldest adult. */
+export function guideElder(world: World): Villager | undefined {
+  const ama = world.villagers[0];
+  if (ama && !ama.dead) return ama;
+  let best: Villager | undefined;
+  for (const v of world.villagers) if (!v.dead && (!best || v.age > best.age)) best = v;
+  return best;
 }
 
-export function tutorialComplete(world: World): boolean {
-  return TUTORIAL_STEPS.every((s) => isStepDone(world, s));
+/** The field the guide points at (the middle field, nearest the player). */
+export function guideField(world: World): Building | undefined {
+  const fields = world.buildings.filter((b) => b.kind === 'field');
+  return fields[Math.min(1, fields.length - 1)];
 }
 
-/** Is the moment right to teach this step? */
-function ready(world: World, step: TutorialStep): boolean {
+export function startGuide(world: World, bus?: EventBus): void {
+  world.guide = { step: GUIDE[0].id, active: true };
+  enterStep(world, GUIDE[0].id, bus);
+}
+
+export function skipGuide(world: World, bus?: EventBus): void {
+  finishGuide(world, bus);
+}
+
+function finishGuide(world: World, bus?: EventBus): void {
+  world.guide = { step: 'done', active: false };
+  if (world.weather !== 'clear') setWeather(world, 'clear', bus);
+  world.effects.length = 0;
+  const elder = guideElder(world);
+  if (elder) addChronicle(world, 'guide', { name: elder.name }, [elder.id], bus);
+  bus?.emit('guide.step', { step: 'done' });
+}
+
+function enterStep(world: World, id: GuideStepId, bus?: EventBus): void {
+  const needsFavor = id === 'bless' || id === 'rain' || id === 'shelter' || id === 'swat';
+  if (needsFavor) world.favor = Math.max(world.favor, PRACTICE_FAVOR);
+  if (id === 'rain') {
+    const field = guideField(world);
+    if (field) field.water = 0;
+  }
+  if (id === 'shelter') {
+    setWeather(world, 'storm', bus);
+    initStorm(world);
+  }
+  bus?.emit('guide.step', { step: id });
+}
+
+function completes(step: GuideStepId, e: GuideEvent): boolean {
   switch (step) {
+    case 'welcome':
+      return e.kind === 'inspected';
+    case 'lift':
+      return e.kind === 'dropped' && e.building !== null && e.building.startsWith('field');
+    case 'bless':
+      return e.kind === 'power' && e.power === 'bless';
+    case 'ride':
+      return e.kind === 'climbed';
     case 'rain':
-      return world.weather === 'drought';
+      return e.kind === 'power' && e.power === 'rain';
     case 'shelter':
-      return world.weather === 'storm';
-    default:
-      return true;
+      return e.kind === 'power' && e.power === 'shelter';
+    case 'swat':
+      return e.kind === 'calmed';
+    case 'wave':
+      return e.kind === 'waved';
+    case 'pause':
+      return e.kind === 'paused';
   }
 }
 
-/**
- * The hint to show now, or null while waiting (e.g. for the drought). Steps
- * are taught in order; a later power used early still counts when reached.
- */
-export function currentHint(world: World): Hint | null {
-  for (const step of TUTORIAL_STEPS) {
-    if (isStepDone(world, step)) continue;
-    return ready(world, step) ? { step, ...HINTS[step] } : null;
+/** Feeds a player action to the guide; returns true when it moved on. */
+export function guideEvent(world: World, e: GuideEvent, bus?: EventBus): boolean {
+  const step = guideStep(world);
+  if (!step || !completes(step.id, e)) return false;
+  const i = GUIDE.findIndex((s) => s.id === step.id);
+  const next = GUIDE[i + 1];
+  if (!next) {
+    finishGuide(world, bus);
+    return true;
   }
-  return COMPLETE;
+  // Sheltered from the practice storm: keep it going for the swat step.
+  if (step.id === 'shelter' && world.weather !== 'storm') {
+    setWeather(world, 'storm', bus);
+    initStorm(world);
+  }
+  world.guide.step = next.id;
+  enterStep(world, next.id, bus);
+  return true;
 }

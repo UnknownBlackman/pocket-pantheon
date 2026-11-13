@@ -28,7 +28,8 @@ function assertValid(w: World): void {
   }
   assert.ok(w.favor >= 0 && w.favor <= RULES.favor.max);
   assert.ok(w.food >= 0 && w.food <= 100);
-  assert.ok(w.villagers.length <= RULES.village.maxVillagers);
+  // The dead keep their place in the list; the living respect the cap.
+  assert.ok(w.villagers.filter((v) => !v.dead).length <= RULES.village.maxVillagers);
 }
 
 describe('save and load', () => {

@@ -29,7 +29,14 @@ export type ChronicleKind =
   | 'found'
   | 'waved'
   | 'cheered'
-  | 'title';
+  | 'title'
+  | 'born'
+  | 'died'
+  | 'came-of-age'
+  | 'hurt'
+  | 'full'
+  | 'calmed'
+  | 'guide';
 
 type Vars = Record<string, string | number>;
 
@@ -65,6 +72,13 @@ const TEMPLATES: Record<ChronicleKind, (v: Vars) => string> = {
   waved: (v) => `Day ${v.day}: the god waved, and the village waved back.`,
   cheered: (v) => `Day ${v.day}: the god raised both hands, and the village cheered.`,
   title: (v) => `Day ${v.day}: the villagers began to call you ${v.title}.`,
+  born: (v) => `Day ${v.day}: a child was born to ${v.a} and ${v.b}. They named her ${v.name}.`,
+  died: (v) => `Day ${v.day}: ${v.name} died ${v.cause}, aged ${v.age}.`,
+  'came-of-age': (v) => `Day ${v.day}: ${v.name} came of age.`,
+  hurt: (v) => `Day ${v.day}: ${v.name} was hurt by the god's hand and limped for a while.`,
+  full: (v) => `Day ${v.day}: the huts were full, and no child was born.`,
+  calmed: (v) => `Day ${v.day}: the god swept the storm aside.`,
+  guide: (v) => `Day ${v.day}: Elder ${v.name} taught the new god the old ways.`,
 };
 
 /** True when no entry of this kind has been written today. */

@@ -23,11 +23,14 @@ export function divineTitle(world: World): string {
   if (total < DISTANT_BELOW) return TITLES.distant;
   let faith = 0;
   let initiative = 0;
+  let n = 0;
   for (const v of world.villagers) {
+    if (v.dead) continue;
+    n++;
     faith += v.beliefs.faith;
     initiative += v.beliefs.initiative;
   }
-  const n = world.villagers.length || 1;
+  n ||= 1;
   if (Math.abs(faith / n - initiative / n) < BALANCED_GAP) return TITLES.balanced;
   const weather = c.rain + c.shelter;
   const carry = c.lift + c.ride;

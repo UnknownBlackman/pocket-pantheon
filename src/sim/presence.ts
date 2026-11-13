@@ -16,6 +16,7 @@
 import type { EventBus } from '../core/events.ts';
 import { addChronicle, firstToday } from './chronicle.ts';
 import { clamp01, clampToDisc, dist, stepTowards } from './math.ts';
+import { hurt } from './life.ts';
 import { buildingAt } from './powers.ts';
 import { random, randomRange } from './random.ts';
 import { PRESENCE as P, RULES } from './rules.ts';
@@ -99,7 +100,7 @@ export function makePresence(): GodPresence {
 
 /** Villagers already doing something the god's presence should not interrupt. */
 function busy(v: Villager): boolean {
-  return v.carried || v.ride !== 'none' || v.hide !== 'none' || v.panic > 0;
+  return v.dead || v.carried || v.ride !== 'none' || v.hide !== 'none' || v.panic > 0;
 }
 
 function react(v: Villager, activity: Activity, seconds: number): void {
@@ -179,7 +180,7 @@ function startFall(world: World, v: Villager, hard: boolean, bus?: EventBus): vo
   bus?.emit('villager.fell', { villagerId: v.id, hard });
 }
 
-function land(v: Villager): void {
+function land(world: World, v: Villager, bus?: EventBus): void {
   clampToDisc(v.pos, RULES.village.radius * 0.92);
   v.ride = 'none';
   v.rideHand = null;
@@ -187,8 +188,13 @@ function land(v: Villager): void {
   v.intent = 'idle';
   v.commit = 0;
   v.decisionIn = 0;
-  if (v.rideHard) react(v, 'daze', P.dazeSeconds);
-  else v.activity = 'idle';
+  if (v.rideHard) {
+    // A rough fall: dazed, then a limp (the god's hand never kills).
+    hurt(world, v, bus);
+    v.reactionTime = P.dazeSeconds;
+  } else {
+    v.activity = 'idle';
+  }
   v.rideHard = false;
 }
 
@@ -279,7 +285,7 @@ function updateRiding(
       }
     } else if (v.ride === 'fall') {
       v.activity = 'fall';
-      if (v.rideTime >= P.fallSeconds) land(v);
+      if (v.rideTime >= P.fallSeconds) land(world, v, bus);
     }
   }
 
