@@ -291,6 +291,8 @@ export const PRESENCE = {
   setDownHeight: 0.035,
   /** Riders on a hand resting low and still hop off by themselves after this long. */
   restingDismountSeconds: 8,
+  /** After hopping off, a villager waits this long before climbing on again. */
+  reboardSeconds: 6,
   rideFaith: 0.02,
   rideInitiative: -0.02,
   fallFaith: -0.03,

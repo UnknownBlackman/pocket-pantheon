@@ -207,6 +207,8 @@ function dismount(world: World, v: Villager, bus?: EventBus): void {
   if (!b) {
     v.activity = 'idle';
     v.decisionIn = 0;
+    v.intent = 'idle';
+    v.commit = P.reboardSeconds; // wander off before climbing on again
     return;
   }
   const intent = intentFor(b.kind);
@@ -298,8 +300,8 @@ function updateRiding(
   for (const v of world.villagers) {
     if (onHand >= P.maxRiders) break;
     if (busy(v) || v.reactionTime > 0) continue;
-    // Just delivered to a job (by riding or a pinch): they get to work first.
-    if (v.commit > 0 && v.intent !== 'idle') continue;
+    // Just delivered to a job, or just hopped off: they don't re-board at once.
+    if (v.commit > 0) continue;
     if (dist(v.pos, scratch) > P.inviteRadius) continue;
     if (random(world) >= v.beliefs.faith * P.climbRatePerFaith * dt) continue;
     v.ride = 'climb';
