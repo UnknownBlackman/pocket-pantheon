@@ -42,6 +42,7 @@ export class GuideSystem extends createSystem({
         if (e.paused) feed({ kind: 'paused' });
       }),
       events.on('guide.step', (e) => {
+        console.info(`[guide] step: ${e.step}`);
         this.sayIn = 0.5; // the elder speaks shortly after a new step
         if (e.step === 'done') {
           showToast('You are ready, great one', 'The first day begins. Guide them well, but not too much.', 8);
