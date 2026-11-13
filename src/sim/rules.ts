@@ -289,6 +289,8 @@ export const PRESENCE = {
   /** The hand counts as lifted above this height; set down below setDownHeight. */
   liftedHeight: 0.08,
   setDownHeight: 0.035,
+  /** Riders on a hand resting low and still hop off by themselves after this long. */
+  restingDismountSeconds: 8,
   rideFaith: 0.02,
   rideInitiative: -0.02,
   fallFaith: -0.03,
@@ -375,7 +377,7 @@ export const STORM = {
   /** Swatting a cloud costs this much Favor. */
   swatCost: 0.25,
   /** The hand must pass this fast (m/s) through a cloud to scatter it. */
-  swatSpeed: 0.3,
+  swatSpeed: 0.2,
   /** A scattered cloud regrows after this long. */
   regrowSeconds: 14,
   calmFaith: 0.02,

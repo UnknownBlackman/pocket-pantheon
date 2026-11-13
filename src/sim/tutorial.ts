@@ -67,7 +67,7 @@ export const GUIDE: readonly GuideStep[] = [
   {
     id: 'rain',
     title: 'Rain on the dry field',
-    body: 'This field is parched. Hold your open hand flat, palm down, above it.',
+    body: 'Rest your hand on the table to let your riders off. Then hold your open hand flat, palm down, above the parched field.',
     elder: 'The soil cracks! Send rain, we beg you.',
     target: 'dry-field',
   },

@@ -121,6 +121,7 @@ export class PowerSystem extends createSystem({
         if (Math.hypot(h.x - c.x, h.y - c.y, h.z - c.z) > reach) continue;
         const result = swatCloud(sim, i, events);
         if (result === 'swatted' || result === 'calmed') {
+          console.info(`[swat] cloud ${i} ${result}`);
           whoosh();
           if (result === 'calmed') chime();
         } else if (result === 'no-favor' && this.swatBuzzIn <= 0) {

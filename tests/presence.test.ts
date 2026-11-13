@@ -163,6 +163,16 @@ describe('riding the god\'s palm', () => {
     assert.equal(v.beliefs.faith, faith);
   });
 
+  it('riders on a hand resting on the table hop off by themselves after a while', () => {
+    const { w, p } = inviteWorld(63);
+    run(w, p, 6);
+    const v = w.villagers[0];
+    assert.equal(v.ride, 'ride');
+    run(w, p, PRESENCE.restingDismountSeconds + 1);
+    assert.equal(v.ride, 'none');
+    assert.notEqual(v.activity, 'daze', 'a gentle hop, not a fall');
+  });
+
   it('never carries more than three riders', () => {
     const w = calmWorld(57, 0.2, 0.0);
     for (const v of w.villagers) v.beliefs.faith = 1;

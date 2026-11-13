@@ -281,7 +281,9 @@ function updateRiding(
         v.rideY = h.y;
         v.activity = 'ride';
         if (h.y > P.liftedHeight) v.rideLifted = true;
-        if (v.rideLifted && h.y < P.setDownHeight && h.still) dismount(world, v, bus);
+        // Set down after a ride, or resting on the table a while: they hop off.
+        const settled = v.rideLifted || v.rideTime > P.restingDismountSeconds;
+        if (settled && h.y < P.setDownHeight && h.still) dismount(world, v, bus);
       }
     } else if (v.ride === 'fall') {
       v.activity = 'fall';
