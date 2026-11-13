@@ -33,12 +33,14 @@ import { fallbackPosition, fitVillage, isTableHeight } from '../xr/placement.ts'
 import { VillageRoot } from './components.ts';
 import { game } from './game.ts';
 
-type State = 'idle' | 'floating' | 'settling' | 'settled';
+type State = 'idle' | 'arriving' | 'floating' | 'settling' | 'settled';
 type Source = 'plane' | 'hit-test' | 'fallback';
 
 /** Where the village sits in the flat browser preview (no XR). */
 const DESKTOP_SPOT = new Vector3(0, 0.75, -0.35);
 const SCAN_INTERVAL = 0.5;
+/** Wait this long after entering XR so the head pose is real before arriving. */
+const ARRIVE_DELAY = 0.5;
 
 export class PlacementSystem extends createSystem({
   roots: { required: [VillageRoot] },
@@ -46,6 +48,7 @@ export class PlacementSystem extends createSystem({
 }) {
   private state: State = 'idle';
   private searchTime = 0;
+  private arriveIn = 0;
   private scanIn = 0;
   private floatBase = new Vector3();
   private settleFrom = new Vector3();
@@ -67,13 +70,13 @@ export class PlacementSystem extends createSystem({
     this.cleanupFuncs.push(
       this.world.visibilityState.subscribe((vis) => {
         if (vis === VisibilityState.NonImmersive) this.placeForDesktop();
-        else if (vis === VisibilityState.Visible && this.state === 'idle') this.arrive();
+        else if (vis === VisibilityState.Visible && this.state === 'idle') this.beginArrival();
       }),
       // Roots may be created after init.
       this.queries.roots.subscribe('qualify', () => {
         const vis = this.world.visibilityState.peek();
         if (vis === VisibilityState.NonImmersive) this.placeForDesktop();
-        else if (this.state === 'idle') this.arrive();
+        else if (this.state === 'idle') this.beginArrival();
       }),
     );
   }
@@ -103,7 +106,18 @@ export class PlacementSystem extends createSystem({
 
   // ---------------------------------------------------------------- Arrival
 
-  /** Entering XR: the village appears afloat in front of the player at once. */
+  /** Entering XR: hide the village for a moment until head tracking is live. */
+  private beginArrival(): void {
+    const root = this.root();
+    if (!root?.object3D) return;
+    this.removeAnchor(root);
+    root.object3D.visible = false;
+    this.state = 'arriving';
+    this.arriveIn = ARRIVE_DELAY;
+    setHintPanel(this.world, 'hidden');
+  }
+
+  /** The village appears afloat in front of the player. */
   private arrive(): void {
     const root = this.root();
     const obj = root?.object3D;
@@ -155,6 +169,13 @@ export class PlacementSystem extends createSystem({
     const obj = root?.object3D;
     if (!root || !obj) return;
 
+    if (this.state === 'arriving') {
+      this.arriveIn -= delta;
+      this.player.head.getWorldPosition(this.head);
+      // Wait for a real head pose (not the origin before tracking starts).
+      if (this.arriveIn <= 0 && this.head.y - this.floorY() > 0.3) this.arrive();
+      return;
+    }
     if (this.state === 'floating') {
       obj.position.copy(this.floatBase);
       obj.position.y += Math.sin(time * 1.4) * LAYOUT.floatBob;
