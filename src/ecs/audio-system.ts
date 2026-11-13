@@ -21,6 +21,9 @@ export class AudioSystem extends createSystem({}) {
         giggle();
         console.info(`[presence] ${e.villagerId} is hiding behind the hand`);
       }),
+      events.on('villager.dropped', (e) => {
+        console.info(`[drop] ${e.villagerId} set down on ${e.buildingId ?? 'open ground'}`);
+      }),
       events.on('hideseek.found', (e) => {
         cheer();
         console.info(`[presence] found ${e.count} hiding`);
