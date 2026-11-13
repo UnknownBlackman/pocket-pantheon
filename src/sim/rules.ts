@@ -171,15 +171,16 @@ export const GESTURES = {
   pinchRelease: 0.035,
   pokeDistance: 0.03,
   pokeHoldSeconds: 1.0,
-  palmDownDot: -0.7,
-  palmMinHeight: 0.05,
-  palmMaxHeight: 0.3,
-  palmMaxSpeed: 0.15,
-  rainHoldSeconds: 0.5,
+  /** Palm-down needs the palm normal within ~32 degrees of straight down. */
+  palmDownDot: -0.85,
+  palmMinHeight: 0.06,
+  palmMaxHeight: 0.25,
+  palmMaxSpeed: 0.08,
+  rainHoldSeconds: 0.8,
   shelterTwoHandMinApart: 0.1,
   shelterTwoHandMaxApart: 0.25,
-  shelterTwoHandHoldSeconds: 0.7,
-  shelterOneHandHoldSeconds: 1.5,
+  shelterTwoHandHoldSeconds: 0.9,
+  shelterOneHandHoldSeconds: 2.0,
   pauseHoldSeconds: 1.0,
   noHandsWarningSeconds: 3,
   /** Extended: fingertip reaches this much further from the wrist than its knuckle. */
@@ -194,12 +195,25 @@ export const GESTURES = {
   /** Extra poke reach around a building's footprint. */
   buildingPokeRadius: 0.045,
   /** Head-direction gaze: cone half-angle (deg), dwell and max range. */
-  gazeConeDegrees: 7,
+  gazeConeDegrees: 10,
   gazeDwellSeconds: 0.4,
+  /**
+   * Eyes look below the head's forward direction when looking down at a table;
+   * head-direction gaze aims this many degrees lower to match.
+   */
+  gazePitchBiasDegrees: 15,
+  /** Pointing with the index finger shows a villager's details. */
+  pointConeDegrees: 8,
+  pointDwellSeconds: 0.2,
+  pointMaxDistance: 1.0,
+  /** A fingertip this close to a villager shows their details at once. */
+  touchDistance: 0.05,
   gazeLingerSeconds: 0.3,
   gazeMaxDistance: 1.5,
   /** After a power fires, the hand must leave the pose for this long. */
-  powerCooldownSeconds: 0.6,
+  powerCooldownSeconds: 2,
+  /** A hand must have been tracked this long before palm powers count it. */
+  palmArmSeconds: 1.0,
 } as const;
 
 /** Physical sizes from the scale-and-layout table, metres. */

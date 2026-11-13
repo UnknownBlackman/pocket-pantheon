@@ -8,6 +8,8 @@ import type { Handedness, V3 } from './gestures.ts';
 export interface HandData {
   handedness: Handedness;
   tracked: boolean;
+  /** Seconds since tracking (re)started for this hand. */
+  trackedFor: number;
   joints: Float32Array;
   palm: V3;
   normal: V3;
@@ -24,6 +26,7 @@ function makeHand(handedness: Handedness): HandData {
   return {
     handedness,
     tracked: false,
+    trackedFor: 0,
     joints: new Float32Array(JOINT_COUNT * 3),
     palm: { x: 0, y: 0, z: 0 },
     normal: { x: 0, y: 1, z: 0 },

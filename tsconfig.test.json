@@ -10,6 +10,7 @@
     "src/sim/**/*.ts",
     "src/core/**/*.ts",
     "src/xr/placement.ts",
-    "src/xr/gestures.ts"
+    "src/xr/gestures.ts",
+    "src/xr/palm-powers.ts"
   ]
 }

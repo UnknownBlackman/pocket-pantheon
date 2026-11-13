@@ -70,6 +70,7 @@ export class HandGestureSystem extends createSystem({}) {
     const xrHand = source?.hand ?? null;
     if (!xrHand) {
       data.tracked = false;
+      data.trackedFor = 0;
       data.pinching = data.poke = data.open = data.palmDown = false;
       return;
     }
@@ -99,6 +100,7 @@ export class HandGestureSystem extends createSystem({}) {
     }
     if (!ok) {
       data.tracked = false;
+      data.trackedFor = 0;
       return;
     }
 
@@ -112,6 +114,7 @@ export class HandGestureSystem extends createSystem({}) {
       j[i * 3 + 2] = this.tmp.z;
     }
     data.tracked = true;
+    data.trackedFor += delta;
     hands.everTracked = true;
 
     this.lastPalm.x = data.palm.x;

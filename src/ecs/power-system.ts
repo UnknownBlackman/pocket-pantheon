@@ -16,7 +16,9 @@ import { makeRainCloud, makeShelterDome } from '../art/weather-art.ts';
 import { events } from '../core/events.ts';
 import { blessBuilding, blessVillager, rain, shelter } from '../sim/powers.ts';
 import { GESTURES, LAYOUT, RULES } from '../sim/rules.ts';
-import { inPalmBand, wristsApartForShelter } from '../xr/gestures.ts';
+import { wristsApartForShelter } from '../xr/gestures.ts';
+import { choosePalmPower } from '../xr/palm-powers.ts';
+import type { PalmInput, PalmMode } from '../xr/palm-powers.ts';
 import { hands, HANDEDNESS } from '../xr/hand-state.ts';
 import type { HandData } from '../xr/hand-state.ts';
 import { BuildingView, PowerEffect, VillageRoot, VillagerView } from './components.ts';
@@ -26,7 +28,6 @@ import { makeOccludable } from './occlusion.ts';
 const BLESS_COLOR = 0xffd36b;
 const RAIN_COLOR = 0x6cc4ff;
 const SHELTER_COLOR = 0xffe7a8;
-type PalmMode = 'none' | 'rain' | 'shelter1' | 'shelter2';
 const FAIL_COLOR = 0xff6a5a;
 /** Height of a villager's body centre above the diorama surface. */
 const VILLAGER_CENTRE = 0.02;
@@ -51,6 +52,10 @@ export class PowerSystem extends createSystem({
   private poke: Record<'left' | 'right', PokeState> = { left: newPoke(), right: newPoke() };
   private tip = new Vector3();
   private palmLocal = { left: new Vector3(), right: new Vector3() };
+  private palmIn: Record<'left' | 'right', PalmInput> = {
+    left: { tracked: false, trackedFor: 0, palmDown: false, speed: 0, height: 0, distance: 0, overField: false },
+    right: { tracked: false, trackedFor: 0, palmDown: false, speed: 0, height: 0, distance: 0, overField: false },
+  };
   private palmMode: PalmMode = 'none';
   private palmHold = 0;
   private palmFired = false;
@@ -96,15 +101,19 @@ export class PowerSystem extends createSystem({
 
   // ---------------------------------------------------------------- Rain / Shelter
 
-  /** Palm position in village space if this hand is a valid palm-down over the village. */
-  private palmOverVillage(hand: HandData, out: Vector3): boolean {
-    if (!hand.tracked || !hand.palmDown || hand.palmSpeed > GESTURES.palmMaxSpeed) return false;
+  /** Fills a palm-power input for one hand, in village space. */
+  private samplePalm(hand: HandData, local: Vector3, out: PalmInput): void {
     const rootObj = this.root()?.object3D;
-    if (!rootObj) return false;
-    out.set(hand.palm.x, hand.palm.y, hand.palm.z);
-    rootObj.worldToLocal(out);
-    if (!inPalmBand(out.y - LAYOUT.baseHeight)) return false;
-    return Math.hypot(out.x, out.z) <= RULES.village.radius;
+    out.tracked = hand.tracked && !!rootObj;
+    out.trackedFor = hand.trackedFor;
+    out.palmDown = hand.palmDown;
+    out.speed = hand.palmSpeed;
+    if (!out.tracked) return;
+    local.set(hand.palm.x, hand.palm.y, hand.palm.z);
+    rootObj!.worldToLocal(local);
+    out.height = local.y - LAYOUT.baseHeight;
+    out.distance = Math.hypot(local.x, local.z);
+    out.overField = this.fieldUnder(local.x, local.z) !== null;
   }
 
   private fieldUnder(x: number, z: number): { x: number; z: number } | null {
@@ -113,6 +122,14 @@ export class PowerSystem extends createSystem({
       if (b.kind === 'field' && Math.abs(b.pos.x - x) < reach && Math.abs(b.pos.z - z) < reach) return b.pos;
     }
     return null;
+  }
+
+  /** Palm powers wait while the hands or villagers are busy with something else. */
+  private palmBlocked(): boolean {
+    if (hands.left.pinching || hands.right.pinching) return true;
+    if (game.presence.hideHand !== null) return true;
+    for (const v of game.sim.villagers) if (v.carried || v.ride !== 'none') return true;
+    return false;
   }
 
   private resetPalm(): void {
@@ -124,30 +141,21 @@ export class PowerSystem extends createSystem({
 
   private updatePalmPowers(delta: number): void {
     this.palmCooldown = Math.max(0, this.palmCooldown - delta);
-    const l = this.palmOverVillage(hands.left, this.palmLocal.left);
-    const r = this.palmOverVillage(hands.right, this.palmLocal.right);
-
-    let mode: PalmMode = 'none';
-    let need = 0;
-    if (l && r && wristsApartForShelter(hands.left.joints, hands.right.joints)) {
-      mode = 'shelter2';
-      need = GESTURES.shelterTwoHandHoldSeconds;
+    this.samplePalm(hands.left, this.palmLocal.left, this.palmIn.left);
+    this.samplePalm(hands.right, this.palmLocal.right, this.palmIn.right);
+    const apart =
+      hands.left.tracked && hands.right.tracked && wristsApartForShelter(hands.left.joints, hands.right.joints);
+    const choice = choosePalmPower(this.palmIn.left, this.palmIn.right, apart, this.palmBlocked());
+    const mode: PalmMode = choice.mode;
+    const need = choice.hold;
+    if (mode === 'shelter2') {
       this.palmX = (this.palmLocal.left.x + this.palmLocal.right.x) / 2;
       this.palmZ = (this.palmLocal.left.z + this.palmLocal.right.z) / 2;
-    } else if (l || r) {
-      const p = r ? this.palmLocal.right : this.palmLocal.left;
-      const field = this.fieldUnder(p.x, p.z);
-      if (field) {
-        mode = 'rain';
-        need = GESTURES.rainHoldSeconds;
-        this.palmX = field.x;
-        this.palmZ = field.z;
-      } else {
-        mode = 'shelter1';
-        need = GESTURES.shelterOneHandHoldSeconds;
-        this.palmX = p.x;
-        this.palmZ = p.z;
-      }
+    } else if (choice.hand) {
+      const p = this.palmLocal[choice.hand];
+      const field = mode === 'rain' ? this.fieldUnder(p.x, p.z) : null;
+      this.palmX = field ? field.x : p.x;
+      this.palmZ = field ? field.z : p.z;
     }
 
     if (mode === 'none') {
