@@ -38,7 +38,7 @@ const PAUSE_BUTTONS: readonly PanelButton[] = [
 const PAUSE_BUTTONS_ARMED: readonly PanelButton[] = PAUSE_BUTTONS.map((b) =>
   b.id === 'restart' ? { ...b, label: 'Yes, start over' } : b,
 );
-const SKIP_BUTTONS: readonly PanelButton[] = [{ id: 'skip', label: 'Skip tutorial', x: 400, y: 250, w: 210, h: 56 }];
+const SKIP_BUTTONS: readonly PanelButton[] = [{ id: 'skip', label: 'Skip tutorial', x: 404, y: 284, w: 196, h: 52 }];
 const NO_BUTTONS: readonly PanelButton[] = [];
 /** Hint panel position in village space: above the back of the diorama. */
 const HINT_LOCAL = new Vector3(0, LAYOUT.baseHeight + 0.24, -0.2);
@@ -70,7 +70,7 @@ export class UISystem extends createSystem({
   private local = new Vector3();
 
   init(): void {
-    this.hint = this.makePanel(640, 320, 0.3, 'HintPanel');
+    this.hint = this.makePanel(640, 360, 0.3, 'HintPanel');
     this.pause = this.makePanel(640, 380, 0.3, 'PausePanel');
     this.handsPanel = this.makePanel(640, 300, 0.32, 'HandsNeededPanel');
     drawHint(

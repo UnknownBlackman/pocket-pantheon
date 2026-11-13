@@ -2,7 +2,7 @@
  * Drawing for the spatial panels. Each panel is a CanvasPanel; buttons are
  * canvas rectangles hit-tested against the index fingertip by UISystem.
  */
-import { CanvasPanel, roundRect, rule, UI_COLORS, UI_FONT, wrapText } from './canvas-panel.ts';
+import { CanvasPanel, parchment, roundRect, rule, UI_BODY, UI_COLORS, UI_FONT, wrapText } from './canvas-panel.ts';
 
 export interface PanelButton {
   id: string;
@@ -13,23 +13,105 @@ export interface PanelButton {
   h: number;
 }
 
-/** Hint card: a title and a wrapped body. */
+/**
+ * Hint card as an unrolled scroll: wooden rollers with knobs top and bottom,
+ * an illuminated drop-cap on the title, a rubric rule and a red wax seal.
+ */
 export function drawHint(panel: CanvasPanel, title: string, body: string): void {
-  const ctx = panel.begin();
+  const ctx = panel.ctx;
+  const W = panel.widthPx;
+  const H = panel.heightPx;
+  ctx.clearRect(0, 0, W, H);
+  // The sheet between the rollers.
+  parchment(ctx, 34, 26, W - 68, H - 52, { radius: 6, flourishes: false });
+  roller(ctx, 14, 8, W - 28, 30);
+  roller(ctx, 14, H - 38, W - 28, 30);
+
+  // Illuminated drop-cap: a gilt square with the title's first letter in red.
+  const cap = title.charAt(0);
+  const rest = title.slice(1);
+  const cx = 62;
+  const cy = 52;
+  const cs = 62;
+  const g = ctx.createLinearGradient(cx, cy, cx + cs, cy + cs);
+  g.addColorStop(0, '#f2cf6a');
+  g.addColorStop(1, '#b8862b');
+  roundRect(ctx, cx, cy, cs, cs, 8);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#6a4526';
+  ctx.stroke();
+  ctx.fillStyle = UI_COLORS.title;
+  ctx.font = `700 50px ${UI_FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(cap, cx + cs / 2, cy + cs / 2 + 2);
+  ctx.textAlign = 'left';
+
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = UI_COLORS.title;
-  let size = 44;
+  let size = 42;
   ctx.font = `700 ${size}px ${UI_FONT}`;
-  while (ctx.measureText(title).width > panel.widthPx - 80 && size > 30) {
+  while (ctx.measureText(rest).width > W - 230 && size > 28) {
     size -= 2;
     ctx.font = `700 ${size}px ${UI_FONT}`;
   }
-  ctx.fillText(title, 40, 76);
-  rule(ctx, 40, 96, panel.widthPx - 80);
+  ctx.fillText(rest, cx + cs + 4, cy + cs - 14);
+  rule(ctx, cx, cy + cs + 14, W - cx * 2);
   ctx.fillStyle = UI_COLORS.text;
-  ctx.font = `500 30px ${UI_FONT}`;
-  wrapText(ctx, body, 40, 140, panel.widthPx - 80, 38, 4);
+  ctx.font = `700 28px ${UI_BODY}`;
+  wrapText(ctx, body, cx, cy + cs + 52, W - cx * 2, 36, 4);
+  seal(ctx, 70, H - 66);
   panel.commit();
+}
+
+/** A turned wooden scroll roller with knobs. */
+function roller(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, '#a06a3c');
+  g.addColorStop(0.45, '#6e4322');
+  g.addColorStop(1, '#3e2410');
+  roundRect(ctx, x + 14, y, w - 28, h, h / 2);
+  ctx.fillStyle = g;
+  ctx.fill();
+  for (const kx of [x + 10, x + w - 10]) {
+    ctx.beginPath();
+    ctx.arc(kx, y + h / 2, h / 2 + 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#b8862b';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#5a3a1a';
+    ctx.stroke();
+  }
+}
+
+/** A red wax seal stamped with a little star. */
+function seal(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+  ctx.save();
+  ctx.shadowColor = 'rgba(40, 0, 0, 0.4)';
+  ctx.shadowBlur = 4;
+  ctx.beginPath();
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    const r = i % 2 ? 22 : 25;
+    ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#9a2b20';
+  ctx.fill();
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(x, y, 15, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255, 210, 170, 0.5)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255, 220, 180, 0.75)';
+  ctx.font = `700 20px ${UI_FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('✦', x, y + 1);
+  ctx.textAlign = 'left';
 }
 
 export function drawButtons(panel: CanvasPanel, buttons: readonly PanelButton[], hot: string | null): void {
@@ -72,7 +154,7 @@ export function drawPause(panel: CanvasPanel, buttons: readonly PanelButton[], h
   ctx.font = `700 48px ${UI_FONT}`;
   ctx.fillText('Paused', 36, 78);
   ctx.fillStyle = UI_COLORS.text;
-  ctx.font = `500 30px ${UI_FONT}`;
+  ctx.font = `700 28px ${UI_BODY}`;
   wrapText(ctx, note, 36, 128, panel.widthPx - 72, 38, 2);
   drawButtons(panel, buttons, hot);
   panel.commit();
@@ -142,11 +224,11 @@ export function drawDusk(
   ctx.fillStyle = UI_COLORS.initiative;
   ctx.fillText(`Initiative ${Math.round(d.initiative * 100)} (${signed(d.initiativeDelta)})`, 360, 162);
   ctx.fillStyle = UI_COLORS.text;
-  ctx.font = `500 28px ${UI_FONT}`;
+  ctx.font = `700 26px ${UI_BODY}`;
   let y = wrapText(ctx, d.leaning, 36, 206, w - 72, 34, 2) + 8;
 
   ctx.fillStyle = UI_COLORS.dim;
-  ctx.font = `500 24px ${UI_FONT}`;
+  ctx.font = `600 23px ${UI_BODY}`;
   const bottom = buttons.length ? buttons[0].y - 16 : panel.heightPx - 30;
   for (const e of d.entries) {
     if (y > bottom - 30) break;
@@ -164,14 +246,14 @@ export function drawChronicle(panel: CanvasPanel, entries: string[]): void {
   ctx.font = `700 44px ${UI_FONT}`;
   ctx.fillText('The Chronicle', 36, 70);
   ctx.fillStyle = UI_COLORS.text;
-  ctx.font = `500 26px ${UI_FONT}`;
+  ctx.font = `600 25px ${UI_BODY}`;
   let y = 116;
   for (const e of entries) {
     if (y > panel.heightPx - 40) break;
     y = wrapText(ctx, e, 36, y, panel.widthPx - 72, 32, 3) + 6;
   }
   ctx.fillStyle = UI_COLORS.dim;
-  ctx.font = `500 22px ${UI_FONT}`;
+  ctx.font = `600 21px ${UI_BODY}`;
   ctx.fillText('Poke the tablet again to close.', 36, panel.heightPx - 26);
   panel.commit();
 }

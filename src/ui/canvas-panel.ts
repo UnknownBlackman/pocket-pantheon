@@ -12,11 +12,11 @@ import { CanvasTexture, Mesh, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace }
 export const UI_COLORS = {
   parchment: '#f6ead0',
   parchmentDeep: '#e6cf9f',
-  ink: '#3a2414',
-  border: '#7a5530',
-  title: '#8a2a1c', // rubric red, as in illuminated manuscripts
-  text: '#3a2414',
-  dim: '#7a6248',
+  ink: '#1e1009',
+  border: '#6a4526',
+  title: '#7e1f12', // rubric red, as in illuminated manuscripts
+  text: '#1e1009',
+  dim: '#4e3826',
   gold: '#b8862b',
   good: '#4f7a2a',
   warn: '#c06a1e',
@@ -25,8 +25,12 @@ export const UI_COLORS = {
   initiative: '#2f6aa0',
 } as const;
 
-/** Readable serif for the manuscript look, falling back to system fonts. */
+/** Serif for headings and names: the manuscript look. */
 export const UI_FONT = 'Georgia, "Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", serif';
+/** Heavy humanist sans for body text: legible at a distance in a headset. */
+export const UI_BODY = '"Segoe UI", "Trebuchet MS", Roboto, "Helvetica Neue", Arial, system-ui, sans-serif';
+/** Canvas pixels per layout pixel: renders text crisper than its layout size. */
+const SHARPNESS = 1.6;
 
 export class CanvasPanel {
   readonly canvas: HTMLCanvasElement;
@@ -41,12 +45,14 @@ export class CanvasPanel {
     this.widthPx = widthPx;
     this.heightPx = heightPx;
     this.canvas = document.createElement('canvas');
-    this.canvas.width = widthPx;
-    this.canvas.height = heightPx;
+    // Layout stays in `widthPx` x `heightPx`; the canvas has extra pixels.
+    this.canvas.width = Math.round(widthPx * SHARPNESS);
+    this.canvas.height = Math.round(heightPx * SHARPNESS);
     this.ctx = this.canvas.getContext('2d')!;
+    this.ctx.setTransform(SHARPNESS, 0, 0, SHARPNESS, 0, 0);
     this.texture = new CanvasTexture(this.canvas);
     this.texture.colorSpace = SRGBColorSpace;
-    this.texture.anisotropy = 4;
+    this.texture.anisotropy = 8;
     const material = new MeshBasicMaterial({
       map: this.texture,
       transparent: true,
@@ -232,7 +238,7 @@ export function drawBar(
   w: number,
 ): void {
   ctx.fillStyle = UI_COLORS.dim;
-  ctx.font = `600 22px ${UI_FONT}`;
+  ctx.font = `700 22px ${UI_BODY}`;
   ctx.textBaseline = 'middle';
   ctx.fillText(label, x, y);
   const bx = x + 120;

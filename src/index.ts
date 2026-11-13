@@ -7,6 +7,7 @@ import { ChronicleSystem } from './ecs/chronicle-system.js';
 import { GuideSystem } from './ecs/guide-system.js';
 import { LifeSystem } from './ecs/life-system.js';
 import { SpeechSystem } from './ecs/speech-system.js';
+import { StatsSystem } from './ecs/stats-system.js';
 import { EffectsSystem } from './ecs/effects-system.js';
 import { GazeBubbleSystem } from './ecs/gaze-bubble-system.js';
 import { HandFxSystem } from './ecs/hand-fx-system.js';
@@ -67,6 +68,7 @@ World.create(
     .registerSystem(ChronicleSystem, { priority: P.ui })
     .registerSystem(GuideSystem, { priority: P.ui })
     .registerSystem(SpeechSystem, { priority: P.ui })
+    .registerSystem(StatsSystem, { priority: P.ui })
     .registerSystem(LifeSystem, { priority: P.effects })
     .registerSystem(PanelSystem, { priority: P.ui })
     .registerSystem(SaveSystem, { priority: P.save });

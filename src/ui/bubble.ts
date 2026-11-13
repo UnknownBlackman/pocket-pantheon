@@ -10,7 +10,7 @@
  *   elder - gold-trimmed vellum with flourishes and a red "Elder" tab.
  */
 import type { CanvasPanel } from './canvas-panel.ts';
-import { diamond, layoutLines, parchment, roundRect, UI_COLORS, UI_FONT } from './canvas-panel.ts';
+import { diamond, layoutLines, parchment, roundRect, UI_BODY, UI_COLORS, UI_FONT } from './canvas-panel.ts';
 
 export type BubbleMood = 'calm' | 'joy' | 'sad' | 'alarm' | 'elder';
 
@@ -53,10 +53,10 @@ export function drawSpeechBubble(panel: CanvasPanel, spec: BubbleSpec): void {
   // Fit the text: shrink the font until it is at most three lines.
   let size = 36;
   let lines: string[] = [];
-  const weight = spec.mood === 'alarm' ? 800 : 700;
-  const style = spec.mood === 'elder' ? 'italic ' : '';
+  const weight = spec.mood === 'alarm' ? 900 : 700;
+  const style = '';
   for (; size >= 22; size -= 2) {
-    ctx.font = `${style}${weight} ${size}px ${UI_FONT}`;
+    ctx.font = `${style}${weight} ${size}px ${UI_BODY}`;
     lines = layoutLines(ctx, spec.text, maxText);
     if (lines.length <= 3) break;
   }
@@ -127,7 +127,7 @@ export function drawSpeechBubble(panel: CanvasPanel, spec: BubbleSpec): void {
   ctx.fillText(name, tabX + 14, tabY + (TAB_H - 8) / 2 + 1);
 
   // The words.
-  ctx.font = `${style}${weight} ${size}px ${UI_FONT}`;
+  ctx.font = `${style}${weight} ${size}px ${UI_BODY}`;
   ctx.fillStyle = look.ink;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

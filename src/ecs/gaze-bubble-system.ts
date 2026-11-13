@@ -15,7 +15,7 @@ import { isDependent } from '../sim/villager.ts';
 import { GESTURES } from '../sim/rules.ts';
 import { J } from '../xr/gestures.ts';
 import { hands } from '../xr/hand-state.ts';
-import { CanvasPanel, drawBar, UI_COLORS, UI_FONT } from '../ui/canvas-panel.ts';
+import { CanvasPanel, drawBar, UI_BODY, UI_COLORS, UI_FONT } from '../ui/canvas-panel.ts';
 import { VillageRoot, VillagerView } from './components.ts';
 import { game } from './game.ts';
 
@@ -235,10 +235,10 @@ export class GazeBubbleSystem extends createSystem({
     ctx.font = `700 34px ${UI_FONT}`;
     ctx.fillText(v.name, 24, 48);
     ctx.fillStyle = UI_COLORS.dim;
-    ctx.font = `500 20px ${UI_FONT}`;
+    ctx.font = `700 20px ${UI_BODY}`;
     ctx.fillText(v.age < 13 ? `child, ${v.age}` : `${v.age}${v.limp > 0 ? ', limping' : ''}`, 24 + Math.min(150, v.name.length * 19), 48);
     ctx.fillStyle = UI_COLORS.dim;
-    ctx.font = `500 22px ${UI_FONT}`;
+    ctx.font = `700 22px ${UI_BODY}`;
     const doing = isDependent(v) && v.activity === 'idle' ? 'waiting for a sign' : ACTIVITY_TEXT[v.activity] ?? v.activity;
     ctx.textAlign = 'right';
     ctx.fillText(doing, 376, 48);
