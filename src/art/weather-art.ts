@@ -32,15 +32,20 @@ const domeRimMat = new MeshBasicMaterial({ color: 0xffd36b, transparent: true, o
 /** Cloud height above the table surface, metres. */
 export const CLOUD_HEIGHT = 0.14;
 
-function cloud(radius: number, material: MeshStandardMaterial, puffs: number): Group {
+/**
+ * A cluster of flattened puffs. `ring` places them around the edge only
+ * (leaving the middle open so the village stays visible from the seat).
+ */
+function cloud(radius: number, material: MeshStandardMaterial, puffs: number, ring = false): Group {
   const g = new Group();
   g.name = 'Cloud';
+  const size = ring ? 0.2 : 0.4;
   for (let i = 0; i < puffs; i++) {
     const a = (i / puffs) * Math.PI * 2;
     const p = new Mesh(puffGeo, material);
-    const r = i === 0 ? 0 : radius * 0.55;
-    p.position.set(Math.cos(a) * r, (i % 2) * radius * 0.08, Math.sin(a) * r);
-    p.scale.set(radius * 0.6, radius * 0.35, radius * 0.6);
+    const r = ring ? radius * 0.85 : i === 0 ? 0 : radius * 0.5;
+    p.position.set(Math.cos(a) * r, (i % 2) * radius * 0.05, Math.sin(a) * r);
+    p.scale.set(radius * size, radius * size * 0.5, radius * size);
     g.add(p);
   }
   g.position.y = CLOUD_HEIGHT;
@@ -71,7 +76,7 @@ export function makeRainCloud(radius: number): Group {
 export function makeStormCloud(radius: number): Group {
   const g = new Group();
   g.name = 'StormCloud';
-  g.add(cloud(radius, stormMat, 9));
+  g.add(cloud(radius, stormMat, 14, true));
   drops(g, radius * 0.95, 60);
   return g;
 }
