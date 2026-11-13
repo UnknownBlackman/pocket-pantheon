@@ -89,3 +89,70 @@ export function fallbackPosition(
     z: head.z - Math.cos(yaw) * LAYOUT.fallbackForward,
   };
 }
+
+/** Shortest distance from a point to a polygon's edges (x/z). */
+export function distanceToEdges(x: number, z: number, points: ReadonlyArray<{ x: number; z: number }>): number {
+  let best = Infinity;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const a = points[j];
+    const b = points[i];
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const len2 = dx * dx + dz * dz || 1e-12;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / len2));
+    best = Math.min(best, Math.hypot(x - (a.x + dx * t), z - (a.z + dz * t)));
+  }
+  return best;
+}
+
+export interface VillageFit {
+  /** Village centre in the polygon's space. */
+  x: number;
+  z: number;
+  /** Village scale, between LAYOUT.minVillageScale and 1. */
+  scale: number;
+  /** True when even the smallest allowed village hangs over the edge. */
+  overhang: boolean;
+}
+
+/**
+ * Where a round village of `radius` fits best on a table polygon. Prefers
+ * full size, sliding the centre inward from `prefer` as little as needed;
+ * if no spot fits full size it uses the roomiest spot and shrinks the
+ * village, never below LAYOUT.minVillageScale (then it overhangs a little).
+ * `reachable(x, z)` filters out spots the seated player cannot reach.
+ */
+export function fitVillage(
+  polygon: ReadonlyArray<{ x: number; z: number }>,
+  prefer: { x: number; z: number },
+  radius: number,
+  reachable: (x: number, z: number) => boolean = () => true,
+): VillageFit | null {
+  if (polygon.length < 3) return null;
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (const p of polygon) {
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+    minZ = Math.min(minZ, p.z);
+    maxZ = Math.max(maxZ, p.z);
+  }
+  const step = LAYOUT.fitGridStep;
+  let best: { x: number; z: number; room: number; dist: number } | null = null;
+  for (let x = minX + step / 2; x <= maxX; x += step) {
+    for (let z = minZ + step / 2; z <= maxZ; z += step) {
+      if (!pointInPolygon(x, z, polygon) || !reachable(x, z)) continue;
+      // Room for the village here, capped at full size, in 5 mm steps.
+      const room = Math.floor(Math.min(distanceToEdges(x, z, polygon), radius) / 0.005) * 0.005;
+      const dist = Math.hypot(x - prefer.x, z - prefer.z);
+      if (!best || room > best.room + 1e-9 || (Math.abs(room - best.room) < 1e-9 && dist < best.dist)) {
+        best = { x, z, room, dist };
+      }
+    }
+  }
+  if (!best) return null;
+  const scale = Math.max(LAYOUT.minVillageScale, Math.min(1, best.room / radius));
+  return { x: best.x, z: best.z, scale, overhang: best.room < radius * scale - 1e-6 };
+}

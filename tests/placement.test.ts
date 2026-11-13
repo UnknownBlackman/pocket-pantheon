@@ -60,3 +60,42 @@ describe('placement helpers', () => {
     assert.ok(Math.abs(turned.x + LAYOUT.fallbackForward) < 1e-9);
   });
 });
+
+describe('fitting the round village on a table', () => {
+  const rect = (w: number, d: number) => [
+    { x: -w / 2, z: -d / 2 },
+    { x: w / 2, z: -d / 2 },
+    { x: w / 2, z: d / 2 },
+    { x: -w / 2, z: d / 2 },
+  ];
+  const R = 0.3;
+
+  it('a big table fits the full village, slid inward from the preferred spot near the edge', async () => {
+    const { fitVillage } = await import('../src/xr/placement.ts');
+    const f = fitVillage(rect(1.6, 0.8), { x: 0, z: 0.38 }, R)!;
+    assert.equal(f.scale, 1);
+    assert.equal(f.overhang, false);
+    assert.ok(f.z <= 0.4 - R + 0.011, `centre ${f.z} keeps the disc on the table`);
+    assert.ok(Math.abs(f.x) < 0.02, 'stays in front of the player');
+  });
+
+  it('a 70 x 55 cm table shrinks the village a little to fit', async () => {
+    const { fitVillage } = await import('../src/xr/placement.ts');
+    const f = fitVillage(rect(0.7, 0.55), { x: 0, z: 0 }, R)!;
+    assert.ok(f.scale < 1 && f.scale >= LAYOUT.minVillageScale, `scale ${f.scale}`);
+    assert.equal(f.overhang, false);
+  });
+
+  it('a small table keeps the minimum size and overhangs', async () => {
+    const { fitVillage } = await import('../src/xr/placement.ts');
+    const f = fitVillage(rect(0.5, 0.4), { x: 0, z: 0 }, R)!;
+    assert.equal(f.scale, LAYOUT.minVillageScale);
+    assert.equal(f.overhang, true);
+  });
+
+  it('respects reach', async () => {
+    const { fitVillage } = await import('../src/xr/placement.ts');
+    const f = fitVillage(rect(1.6, 0.8), { x: 0, z: 0 }, R, (x) => x > 0.3)!;
+    assert.ok(f.x > 0.3);
+  });
+});

@@ -1,17 +1,21 @@
 /**
- * Places and anchors the VillageRoot on the player's table.
+ * Brings the village to the player's table, with no planting step.
  *
- * Fallback chain: a detected table plane, then a hand-ray hit test on a
- * table-height surface, then a floating platform 50 cm in front of the head
- * and 25 cm below eye level. A ghost ring shows the spot; the player can
- * pinch-drag the ring to move it and pinches the air (without grabbing the
- * ring) to confirm. Outside XR the village is planted at a fixed preview spot.
+ * On entering XR the village appears at once, floating gently 50 cm in front
+ * of the player and 25 cm below eye level, and the day begins with a welcome
+ * message. Meanwhile it looks for the table:
+ *   1. a detected horizontal plane at table height within reach: the village
+ *      slides inward to fit, shrinking to no less than LAYOUT.minVillageScale
+ *      on a small table (then it overhangs a little);
+ *   2. otherwise a look-down hit test from the head onto a table-height surface.
+ * When a surface is found it glides down onto it and is anchored there. If
+ * none turns up within LAYOUT.surfaceSearchSeconds it stays afloat (and is
+ * anchored where it floats). Outside XR the village sits at a preview spot.
  */
 import {
   createSystem,
   EnvironmentRaycastTarget,
-  Grabbed,
-  OneHandGrabbable,
+  Group,
   Quaternion,
   Vector3,
   VisibilityState,
@@ -19,75 +23,57 @@ import {
   XRPlane,
 } from '@iwsdk/core';
 import type { Entity } from '@iwsdk/core';
-import { makeGhost, makeReticle } from '../art/ghost.ts';
+import { chime } from '../audio/sfx.ts';
 import { events } from '../core/events.ts';
-import { LAYOUT } from '../sim/rules.ts';
+import { LAYOUT, RULES } from '../sim/rules.ts';
+import { startSession } from '../sim/world.ts';
 import { setHintPanel } from '../ui/hint-panel.ts';
 import { showToast, uiState } from '../ui/ui-state.ts';
-import { startSession } from '../sim/world.ts';
-import {
-  fallbackPosition,
-  isTableHeight,
-  pickTablePlane,
-  pointInPolygon,
-} from '../xr/placement.ts';
-import type { PlaneCandidate } from '../xr/placement.ts';
+import { fallbackPosition, fitVillage, isTableHeight } from '../xr/placement.ts';
 import { VillageRoot } from './components.ts';
 import { game } from './game.ts';
 
-type Hand = 'left' | 'right';
-const HANDS: readonly Hand[] = ['left', 'right'];
+type State = 'idle' | 'floating' | 'settling' | 'settled';
+type Source = 'plane' | 'hit-test' | 'fallback';
 
 /** Where the village sits in the flat browser preview (no XR). */
 const DESKTOP_SPOT = new Vector3(0, 0.75, -0.35);
-/** Seconds to wait for planes or a hit before using the fallback platform. */
-const FALLBACK_AFTER = 1.5;
-/** Ignore pinches right after placement starts (e.g. the Enter XR pinch). */
-const CONFIRM_GRACE = 0.6;
-const PLANE_SCAN_INTERVAL = 0.5;
+const SCAN_INTERVAL = 0.5;
 
 export class PlacementSystem extends createSystem({
   roots: { required: [VillageRoot] },
   planes: { required: [XRPlane] },
 }) {
-  private state: 'idle' | 'searching' | 'confirmed' = 'idle';
-  private source: 'none' | 'plane' | 'hit-test' | 'fallback' = 'none';
+  private state: State = 'idle';
   private searchTime = 0;
-  private planeScanIn = 0;
-  private manual = false;
-  private pinching: Record<Hand, boolean> = { left: false, right: false };
-  private dragged: Record<Hand, boolean> = { left: false, right: false };
-  private ghost!: Entity;
+  private scanIn = 0;
+  private floatBase = new Vector3();
+  private settleFrom = new Vector3();
+  private settleTo = new Vector3();
+  private fromScale = 1;
+  private toScale = 1;
+  private settleT = 0;
+  private settleSource: Source = 'fallback';
   private reticle: Entity | null = null;
-  private tmpA = new Vector3();
-  private tmpB = new Vector3();
-  private tmpQ = new Quaternion();
-  private up = new Vector3(0, 1, 0);
-  private candidates: PlaneCandidate[] = [];
-  private candidateSpots: Vector3[] = [];
-  private ahead = new Vector3();
-  private forward = new Vector3();
   private head = new Vector3();
-  private planeSpot = new Vector3();
+  private forward = new Vector3();
+  private ahead = new Vector3();
+  private tmp = new Vector3();
+  private tmp2 = new Vector3();
+  private headQ = new Quaternion();
+  private up = new Vector3(0, 1, 0);
 
   init(): void {
-    const ghostObject = makeGhost();
-    ghostObject.visible = false;
-    this.ghost = this.world.createTransformEntity(ghostObject, { persistent: true });
-    this.ghost.addComponent(OneHandGrabbable, { rotate: false, translate: true });
-
     this.cleanupFuncs.push(
       this.world.visibilityState.subscribe((vis) => {
         if (vis === VisibilityState.NonImmersive) this.placeForDesktop();
-        else if (vis === VisibilityState.Visible && this.state === 'idle') this.beginPlacement();
+        else if (vis === VisibilityState.Visible && this.state === 'idle') this.arrive();
       }),
-    );
-    // Roots may be created after init; plant once one exists outside XR.
-    this.cleanupFuncs.push(
+      // Roots may be created after init.
       this.queries.roots.subscribe('qualify', () => {
         const vis = this.world.visibilityState.peek();
         if (vis === VisibilityState.NonImmersive) this.placeForDesktop();
-        else if (this.state === 'idle') this.beginPlacement();
+        else if (this.state === 'idle') this.arrive();
       }),
     );
   }
@@ -97,13 +83,16 @@ export class PlacementSystem extends createSystem({
     return undefined;
   }
 
+  // ---------------------------------------------------------------- Desktop
+
   private placeForDesktop(): void {
     const root = this.root();
     if (!root?.object3D) return;
     this.removeAnchor(root);
-    this.hideGhost();
+    this.dropReticle();
     root.object3D.position.copy(DESKTOP_SPOT);
     root.object3D.rotation.set(0, 0, 0);
+    root.object3D.scale.setScalar(1);
     root.object3D.visible = true;
     this.state = 'idle';
     game.placementSource = 'fallback';
@@ -112,229 +101,33 @@ export class PlacementSystem extends createSystem({
     setHintPanel(this.world, 'welcome');
   }
 
-  private beginPlacement(): void {
+  // ---------------------------------------------------------------- Arrival
+
+  /** Entering XR: the village appears afloat in front of the player at once. */
+  private arrive(): void {
     const root = this.root();
-    if (!root?.object3D) return;
+    const obj = root?.object3D;
+    if (!root || !obj) return;
     this.removeAnchor(root);
-    root.object3D.visible = false;
-    game.stage = 'placing';
-    this.state = 'searching';
-    this.source = 'none';
+    this.updateHead();
+    this.floatBase.copy(this.ahead);
+    obj.position.copy(this.floatBase);
+    obj.rotation.set(0, Math.atan2(this.head.x - this.ahead.x, this.head.z - this.ahead.z), 0);
+    obj.scale.setScalar(1);
+    obj.visible = true;
+    this.state = 'floating';
     this.searchTime = 0;
-    this.planeScanIn = 0;
-    this.manual = false;
-    this.pinching.left = this.pinching.right = false;
-    this.dragged.left = this.dragged.right = false;
-    this.ensureReticle();
-    // In XR the canvas hint panel (UISystem) explains placement.
-    setHintPanel(this.world, 'hidden');
-    uiState.placing = true;
-  }
-
-  private ensureReticle(): void {
-    if (this.reticle) return;
-    try {
-      const obj = makeReticle();
-      obj.visible = false;
-      this.reticle = this.world.createTransformEntity(obj, { persistent: true });
-      this.reticle.addComponent(EnvironmentRaycastTarget, { space: 'right', maxDistance: 2 });
-    } catch (err) {
-      console.warn('[placement] hit test unavailable', err);
-      this.reticle = null;
-    }
-  }
-
-  private hideGhost(): void {
-    const obj = this.ghost.object3D;
-    if (obj) {
-      obj.visible = false;
-      obj.position.set(0, -100, 0); // out of reach so it cannot be grabbed
-    }
-  }
-
-  private removeAnchor(root: Entity): void {
-    try {
-      if (root.hasComponent(XRAnchor)) root.removeComponent(XRAnchor);
-    } catch (err) {
-      console.warn('[placement] could not remove anchor', err);
-    }
-  }
-
-  update(delta: number): void {
-    if (this.state !== 'searching') return;
-    const ghostObj = this.ghost.object3D;
-    const root = this.root();
-    if (!ghostObj || !root) return;
-    this.searchTime += delta;
-
-    const grabbed = this.ghost.hasComponent(Grabbed);
-    if (grabbed) this.manual = true;
-
-    if (!this.manual) this.autoPosition(delta);
-
-    if (this.source !== 'none') {
-      ghostObj.visible = true;
-      uiState.anchor.x = ghostObj.position.x;
-      uiState.anchor.y = ghostObj.position.y;
-      uiState.anchor.z = ghostObj.position.z;
-    }
-
-    // Pinch the air (not the ring) to confirm.
-    for (const hand of HANDS) {
-      const sel = this.input.xr.getSelectState(hand);
-      if (sel.start) {
-        this.pinching[hand] = true;
-        this.dragged[hand] = false;
-      }
-      if (this.pinching[hand] && grabbed) this.dragged[hand] = true;
-      if (sel.end && this.pinching[hand]) {
-        this.pinching[hand] = false;
-        if (!this.dragged[hand] && this.source !== 'none' && this.searchTime > CONFIRM_GRACE) {
-          this.confirm(root);
-          return;
-        }
-      }
-    }
-  }
-
-  private headPosition(out: Vector3): Vector3 {
-    this.player.head.getWorldPosition(out);
-    return out;
-  }
-
-  private floorY(): number {
-    this.player.getWorldPosition(this.tmpA);
-    return this.tmpA.y;
-  }
-
-  private autoPosition(delta: number): void {
-    const ghostObj = this.ghost.object3D!;
-
-    // 1. A detected table plane.
-    this.planeScanIn -= delta;
-    if (this.planeScanIn <= 0) {
-      this.planeScanIn = PLANE_SCAN_INTERVAL;
-      if (this.findTablePlane(this.planeSpot)) {
-        ghostObj.position.copy(this.planeSpot);
-        this.setSource('plane');
-        return;
-      }
-    }
-    if (this.source === 'plane') return;
-
-    // 2. The hand ray's hit on a table-height, upward-facing surface.
-    const reticle = this.reticle;
-    if (reticle?.object3D && reticle.getValue(EnvironmentRaycastTarget, 'xrHitTestResult')) {
-      reticle.object3D.getWorldPosition(this.tmpA);
-      reticle.object3D.getWorldQuaternion(this.tmpQ);
-      this.tmpB.copy(this.up).applyQuaternion(this.tmpQ);
-      this.updateHeadFrame();
-      const reach = Math.hypot(this.tmpA.x - this.head.x, this.tmpA.z - this.head.z);
-      if (this.tmpB.y > 0.9 && isTableHeight(this.tmpA.y - this.floorY()) && reach <= LAYOUT.maxReach) {
-        ghostObj.position.copy(this.tmpA);
-        this.setSource('hit-test');
-        return;
-      }
-    }
-
-    // 3. The floating fallback platform, placed once; the player can drag it.
-    if (this.source === 'none' && this.searchTime > FALLBACK_AFTER) {
-      this.updateHeadFrame();
-      ghostObj.position.copy(this.ahead);
-      this.setSource('fallback');
-    }
-  }
-
-  /** Head position, flat forward direction and the fallback spot ahead. */
-  private updateHeadFrame(): void {
-    this.headPosition(this.head);
-    this.player.head.getWorldQuaternion(this.tmpQ);
-    this.forward.set(0, 0, -1).applyQuaternion(this.tmpQ);
-    this.forward.y = 0;
-    if (this.forward.lengthSq() < 1e-6) this.forward.set(0, 0, -1);
-    this.forward.normalize();
-    const yaw = Math.atan2(-this.forward.x, -this.forward.z);
-    const p = fallbackPosition(this.head, yaw);
-    this.ahead.set(p.x, p.y, p.z);
-  }
-
-  private setSource(source: 'plane' | 'hit-test' | 'fallback'): void {
-    if (this.source === source) return;
-    this.source = source;
-    console.info(`[placement] candidate from ${source}`);
-  }
-
-  /** Finds a reachable table spot on a detected plane; writes it to `out`. */
-  private findTablePlane(out: Vector3): boolean {
-    this.updateHeadFrame();
-    this.candidates.length = 0;
-    const floor = this.floorY();
-    let n = 0;
-    for (const e of this.queries.planes.entities) {
-      try {
-        const plane = e.getValue(XRPlane, '_plane') as
-          | (XRPlane & { semanticLabel?: string })
-          | undefined;
-        const obj = e.object3D;
-        if (!plane || !obj) continue;
-        if (!this.candidateSpots[n]) this.candidateSpots[n] = new Vector3();
-        const spot = this.candidateSpots[n];
-        // Is the spot 50 cm ahead over this plane? Test in plane space.
-        this.tmpA.copy(this.ahead);
-        obj.worldToLocal(this.tmpA);
-        const containsAhead = pointInPolygon(this.tmpA.x, this.tmpA.z, plane.polygon);
-        obj.getWorldPosition(spot);
-        if (containsAhead) spot.set(this.ahead.x, spot.y, this.ahead.z);
-        this.tmpB.set(spot.x - this.head.x, 0, spot.z - this.head.z);
-        this.candidates.push({
-          height: spot.y - floor,
-          horizontal: plane.orientation === 'horizontal',
-          label: plane.semanticLabel,
-          reach: this.tmpB.length(),
-          inFront: this.tmpB.dot(this.forward) > 0,
-          containsAhead,
-        });
-        n++;
-      } catch (err) {
-        console.warn('[placement] bad plane', err);
-      }
-    }
-    const i = pickTablePlane(this.candidates);
-    if (i < 0) return false;
-    out.copy(this.candidateSpots[i]);
-    return true;
-  }
-
-  private confirm(root: Entity): void {
-    const ghostObj = this.ghost.object3D!;
-    const rootObj = root.object3D!;
-    rootObj.position.copy(ghostObj.position);
-    // Face the village's front (+Z) towards the player.
-    const head = this.headPosition(this.tmpA);
-    rootObj.rotation.set(0, Math.atan2(head.x - rootObj.position.x, head.z - rootObj.position.z), 0);
-    rootObj.visible = true;
-    this.hideGhost();
-    if (this.reticle?.object3D) {
-      this.reticle.removeComponent(EnvironmentRaycastTarget);
-      this.reticle.object3D.visible = false;
-      this.reticle.dispose();
-      this.reticle = null;
-    }
-
-    const source = this.source === 'none' ? 'fallback' : this.source;
-    this.tryAnchor(root);
-    this.startOrResumeSession();
-    this.state = 'confirmed';
-    game.placementSource = source;
+    this.scanIn = 0;
     game.stage = 'playing';
     uiState.placing = false;
     setHintPanel(this.world, 'hidden');
-    console.info(`[placement] village placed using ${source}`);
-    events.emit('village.placed', { source });
+    this.ensureReticle();
+    this.welcome();
+    console.info('[placement] village arrived afloat; looking for the table');
   }
 
-  /** Coming back: start a new 3-day session if due, and say what changed. */
-  private startOrResumeSession(): void {
+  /** The welcome message, and a new 3-day session when one is due. */
+  private welcome(): void {
     if (game.newSessionOnPlace) {
       game.newSessionOnPlace = false;
       startSession(game.sim, events);
@@ -344,9 +137,194 @@ export class PlacementSystem extends createSystem({
       game.away = null;
     } else if (game.returning) {
       const title = game.sim.title ? `, ${game.sim.title}` : '';
-      showToast(`Welcome back${title}`, `Your ${game.sim.villagers.length} villagers remember you.`, 5);
+      showToast(`Welcome back${title}`, `Your ${game.sim.villagers.length} villagers remember you.`, 6);
+    } else {
+      showToast(
+        'Welcome, little god',
+        'This village is yours to guide. It will settle on your table when it finds one.',
+        7,
+      );
     }
     game.returning = false;
+  }
+
+  // ---------------------------------------------------------------- Each frame
+
+  update(delta: number, time: number): void {
+    const root = this.root();
+    const obj = root?.object3D;
+    if (!root || !obj) return;
+
+    if (this.state === 'floating') {
+      obj.position.copy(this.floatBase);
+      obj.position.y += Math.sin(time * 1.4) * LAYOUT.floatBob;
+      this.searchTime += delta;
+      this.scanIn -= delta;
+      if (this.scanIn <= 0) {
+        this.scanIn = SCAN_INTERVAL;
+        if (this.findSurface()) {
+          this.startSettle(obj);
+          return;
+        }
+      }
+      if (this.searchTime >= LAYOUT.surfaceSearchSeconds) {
+        // No table found: stay where it floats.
+        obj.position.copy(this.floatBase);
+        this.finish(root, 'fallback');
+      }
+    } else if (this.state === 'settling') {
+      this.settleT = Math.min(1, this.settleT + delta / LAYOUT.settleSeconds);
+      const t = this.settleT;
+      const ease = t * t * (3 - 2 * t); // smoothstep: a gentle glide
+      obj.position.lerpVectors(this.settleFrom, this.settleTo, ease);
+      obj.scale.setScalar(this.fromScale + (this.toScale - this.fromScale) * ease);
+      if (t >= 1) this.finish(root, this.settleSource);
+    }
+  }
+
+  private startSettle(obj: NonNullable<Entity['object3D']>): void {
+    this.state = 'settling';
+    this.settleT = 0;
+    this.settleFrom.copy(obj.position);
+    this.fromScale = obj.scale.x;
+    console.info(
+      `[placement] found the table by ${this.settleSource}; settling at scale ${this.toScale.toFixed(2)}`,
+    );
+  }
+
+  private finish(root: Entity, source: Source): void {
+    this.state = 'settled';
+    this.dropReticle();
+    this.tryAnchor(root);
+    game.placementSource = source;
+    if (source !== 'fallback') chime();
+    console.info(`[placement] village placed using ${source}`);
+    events.emit('village.placed', { source });
+  }
+
+  // ---------------------------------------------------------------- Finding the table
+
+  /** Head position, flat forward direction and the floating spot ahead. */
+  private updateHead(): void {
+    this.player.head.getWorldPosition(this.head);
+    this.player.head.getWorldQuaternion(this.headQ);
+    this.forward.set(0, 0, -1).applyQuaternion(this.headQ);
+    this.forward.y = 0;
+    if (this.forward.lengthSq() < 1e-6) this.forward.set(0, 0, -1);
+    this.forward.normalize();
+    const p = fallbackPosition(this.head, Math.atan2(-this.forward.x, -this.forward.z));
+    this.ahead.set(p.x, p.y, p.z);
+  }
+
+  private floorY(): number {
+    this.player.getWorldPosition(this.tmp);
+    return this.tmp.y;
+  }
+
+  /** Reachable for a seated player: in front and within LAYOUT.maxReach. */
+  private reachable(x: number, z: number): boolean {
+    const dx = x - this.head.x;
+    const dz = z - this.head.z;
+    return Math.hypot(dx, dz) <= LAYOUT.maxReach && dx * this.forward.x + dz * this.forward.z > 0;
+  }
+
+  /** Writes settleTo / toScale / settleSource and returns true when a table is found. */
+  private findSurface(): boolean {
+    this.updateHead();
+    return this.findPlane() || this.findHit();
+  }
+
+  private findPlane(): boolean {
+    const floor = this.floorY();
+    let bestScore = -Infinity;
+    for (const e of this.queries.planes.entities) {
+      try {
+        const plane = e.getValue(XRPlane, '_plane') as (XRPlane & { semanticLabel?: string }) | undefined;
+        const obj = e.object3D;
+        if (!plane || !obj || plane.orientation !== 'horizontal') continue;
+        obj.getWorldPosition(this.tmp);
+        const labelled = plane.semanticLabel?.toLowerCase() === 'table';
+        if (!labelled && !isTableHeight(this.tmp.y - floor)) continue;
+        // Work in the plane's own space: its polygon lies in local x/z.
+        this.tmp2.copy(this.ahead);
+        obj.worldToLocal(this.tmp2);
+        const fit = fitVillage(plane.polygon, { x: this.tmp2.x, z: this.tmp2.z }, RULES.village.radius, (x, z) => {
+          this.tmp.set(x, 0, z);
+          obj.localToWorld(this.tmp);
+          return this.reachable(this.tmp.x, this.tmp.z);
+        });
+        if (!fit) continue;
+        const score = fit.scale * 10 + (labelled ? 1 : 0) - (fit.overhang ? 5 : 0);
+        if (score <= bestScore) continue;
+        bestScore = score;
+        this.settleTo.set(fit.x, 0, fit.z);
+        obj.localToWorld(this.settleTo);
+        this.toScale = fit.scale;
+        this.settleSource = 'plane';
+        if (fit.overhang) console.info('[placement] small table: the village overhangs a little');
+      } catch (err) {
+        console.warn('[placement] bad plane', err);
+      }
+    }
+    return bestScore > -Infinity;
+  }
+
+  /** Look-down ray from the head onto an upward-facing, table-height surface. */
+  private findHit(): boolean {
+    const reticle = this.reticle;
+    if (!reticle?.object3D || !reticle.getValue(EnvironmentRaycastTarget, 'xrHitTestResult')) return false;
+    reticle.object3D.getWorldPosition(this.tmp);
+    reticle.object3D.getWorldQuaternion(this.headQ);
+    this.tmp2.copy(this.up).applyQuaternion(this.headQ);
+    if (this.tmp2.y < 0.9 || !isTableHeight(this.tmp.y - this.floorY())) return false;
+    if (!this.reachable(this.tmp.x, this.tmp.z)) return false;
+    this.settleTo.copy(this.tmp);
+    this.toScale = 1;
+    this.settleSource = 'hit-test';
+    return true;
+  }
+
+  private ensureReticle(): void {
+    if (this.reticle) return;
+    try {
+      // An invisible marker that follows a ray from the head, tilted down.
+      const marker = new Group();
+      marker.name = 'TableProbe';
+      this.reticle = this.world.createTransformEntity(marker, { persistent: true });
+      const tilt = new Quaternion().setFromAxisAngle(
+        new Vector3(1, 0, 0),
+        (-LAYOUT.lookDownDegrees * Math.PI) / 180,
+      );
+      this.reticle.addComponent(EnvironmentRaycastTarget, {
+        space: 'viewer',
+        maxDistance: 1.5,
+        offsetQuaternion: tilt,
+      });
+    } catch (err) {
+      console.warn('[placement] hit test unavailable', err);
+      this.reticle = null;
+    }
+  }
+
+  private dropReticle(): void {
+    if (!this.reticle) return;
+    try {
+      this.reticle.removeComponent(EnvironmentRaycastTarget);
+      this.reticle.destroy();
+    } catch {
+      /* ignore */
+    }
+    this.reticle = null;
+  }
+
+  // ---------------------------------------------------------------- Anchors
+
+  private removeAnchor(root: Entity): void {
+    try {
+      if (root.hasComponent(XRAnchor)) root.removeComponent(XRAnchor);
+    } catch (err) {
+      console.warn('[placement] could not remove anchor', err);
+    }
   }
 
   private tryAnchor(root: Entity): void {

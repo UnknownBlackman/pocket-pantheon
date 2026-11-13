@@ -233,6 +233,18 @@ export const LAYOUT = {
   tableMaxHeight: 1.0,
   /** Seated reach: ignore table spots further than this from the head (horizontal). */
   maxReach: 0.9,
+  /** On a small table the village shrinks to fit, but never below this (villagers stay pinchable). */
+  minVillageScale: 0.8,
+  /** Look for a table this long after entering XR before staying afloat. */
+  surfaceSearchSeconds: 10,
+  /** Seconds the village takes to glide down onto a found surface. */
+  settleSeconds: 1.6,
+  /** Gentle bob while the village floats, metres. */
+  floatBob: 0.003,
+  /** The look-down ray from the head used to find the table by hit test, degrees below forward. */
+  lookDownDegrees: 35,
+  /** Grid step when searching a table polygon for the best spot, metres. */
+  fitGridStep: 0.02,
 } as const;
 
 /**
