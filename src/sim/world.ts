@@ -11,6 +11,7 @@ import type { Building, BuildingKind, Villager, Weather, World } from './types.t
 import { endOfYear, updateLife } from './life.ts';
 import { initStorm, updateStorm } from './storm.ts';
 import { divineTitle } from './title.ts';
+import { guideTopUp } from './tutorial.ts';
 import { updateVillager } from './villager.ts';
 
 const R = RULES;
@@ -343,6 +344,7 @@ export function tick(world: World, dt: number, bus?: EventBus): void {
 
   updateEffects(world, dt);
   updateStorm(world, dt);
+  guideTopUp(world);
   updateBuildings(world, dt, bus);
   for (const v of world.villagers) updateVillager(world, v, dt, bus);
   updateLife(world, dt, bus);

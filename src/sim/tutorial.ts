@@ -188,6 +188,14 @@ function completes(step: GuideStepId, e: GuideEvent): boolean {
   }
 }
 
+/** Practice never fails for lack of Favor: top it up during power steps. */
+export function guideTopUp(world: World): void {
+  const id = world.guide.active ? world.guide.step : '';
+  if ((id === 'bless' || id === 'rain' || id === 'shelter' || id === 'swat') && world.favor < 2) {
+    world.favor = PRACTICE_FAVOR;
+  }
+}
+
 /** Feeds a player action to the guide; returns true when it moved on. */
 export function guideEvent(world: World, e: GuideEvent, bus?: EventBus): boolean {
   const step = guideStep(world);

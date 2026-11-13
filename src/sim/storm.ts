@@ -68,7 +68,8 @@ export function calmStorm(world: World, bus?: EventBus): void {
 
 /** Swatted clouds drift back after a while. */
 export function updateStorm(world: World, dt: number): void {
-  if (world.weather !== 'storm') return;
+  // The tutorial's practice storm stays cleared where it was swatted.
+  if (world.weather !== 'storm' || world.guide.active) return;
   for (let i = 0; i < world.stormClouds.length; i++) {
     if (world.stormClouds[i]) continue;
     world.stormRegrow[i] -= dt;
