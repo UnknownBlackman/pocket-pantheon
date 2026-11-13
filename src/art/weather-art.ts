@@ -121,3 +121,35 @@ export function makeSplashPool(count: number): Group {
   }
   return g;
 }
+
+/** One small dark storm cloud with its own rain (the storm is several of these). */
+export function makeStormlet(radius: number): Group {
+  const g = new Group();
+  g.name = 'Stormlet';
+  g.add(cloud(radius, stormMat, 4));
+  drops(g, radius * 0.9, 8);
+  return g;
+}
+
+const boltMat = new MeshBasicMaterial({ color: 0xfff6c8, transparent: true, opacity: 0.95 });
+
+/** A jagged lightning bolt from cloud height down to the table. */
+export function makeBolt(): Group {
+  const g = new Group();
+  g.name = 'Bolt';
+  let x = 0;
+  let y = CLOUD_HEIGHT;
+  const segments = 4;
+  for (let i = 0; i < segments; i++) {
+    const nx = (i % 2 ? -1 : 1) * 0.006;
+    const ny = CLOUD_HEIGHT * (1 - (i + 1) / segments);
+    const len = Math.hypot(nx - x, ny - y);
+    const seg = new Mesh(new BoxGeometry(0.0016, len, 0.0016), boltMat);
+    seg.position.set((x + nx) / 2, (y + ny) / 2, 0);
+    seg.rotation.z = Math.atan2(x - nx, y - ny);
+    g.add(seg);
+    x = nx;
+    y = ny;
+  }
+  return g;
+}

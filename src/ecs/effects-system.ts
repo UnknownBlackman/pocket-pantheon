@@ -3,16 +3,19 @@
  * shelter domes, the storm cloud and the Favor pips on the rim. Transient
  * PowerEffect entities are removed when done.
  */
-import { createSystem } from '@iwsdk/core';
+import { createSystem, Group as GroupCtor } from '@iwsdk/core';
 import type { Entity, Group, Mesh, Object3D } from '@iwsdk/core';
 
 /** Drops this close to a palm (horizontally) land on the hand. */
 const SPLASH_HAND_RADIUS = 0.055;
 const SPLASH_SECONDS = 0.25;
 import { PIP_DIM, PIP_HALF, PIP_LIT } from '../art/effects-art.ts';
-import { CLOUD_HEIGHT, makeSplashPool, makeStormCloud } from '../art/weather-art.ts';
+import { CLOUD_HEIGHT, makeBolt, makeSplashPool, makeStormlet } from '../art/weather-art.ts';
+import { thunder } from '../audio/sfx.ts';
+import { events } from '../core/events.ts';
+import { stormCloudSpot } from '../sim/storm.ts';
 import { SIDES } from '../sim/presence.ts';
-import { LAYOUT, RULES } from '../sim/rules.ts';
+import { LAYOUT, STORM } from '../sim/rules.ts';
 import { FavorPips, PowerEffect, VillageRoot } from './components.ts';
 import { game } from './game.ts';
 import { makeOccludable } from './occlusion.ts';
@@ -25,7 +28,10 @@ export class EffectsSystem extends createSystem({
   private storm: Object3D | null = null;
   private splashes: Group | null = null;
   private nextSplash = 0;
-  private stormLevel = 0;
+
+  init(): void {
+    this.cleanupFuncs.push(events.on('lightning', (e) => this.strike(e.x, e.z)));
+  }
 
   update(delta: number, time: number): void {
     this.updateStorm(delta, time);
@@ -39,6 +45,7 @@ export class EffectsSystem extends createSystem({
       const t = Math.min(1, age / duration);
       const kind = e.getValue(PowerEffect, 'kind');
       if (kind === 'bless') this.animateSparkles(obj.children, t);
+      else if (kind === 'bolt') obj.visible = Math.sin(age * 60) > -0.3;
       else this.animateWeather(obj, kind === 'rain', age, duration, time);
       if (age >= duration) e.destroy(); // shared geometry: destroy, never dispose
     }
@@ -158,26 +165,66 @@ export class EffectsSystem extends createSystem({
     }
   }
 
-  /** The storm cloud fades in over the whole village while the sim says storm. */
+  /**
+   * The storm: one small stormlet per sim cloud. Present clouds drift and
+   * rain; swatted ones puff outwards and vanish, then drift back if they
+   * regrow.
+   */
   private updateStorm(delta: number, time: number): void {
-    const target = game.sim.weather === 'storm' && game.stage === 'playing' ? 1 : 0;
-    this.stormLevel += (target - this.stormLevel) * Math.min(1, delta * 1.5);
+    const stormy = game.sim.weather === 'storm' && game.stage === 'playing';
     if (!this.storm) {
-      if (target === 0) return;
+      if (!stormy) return;
       let root: Entity | undefined;
       for (const e of this.queries.roots.entities) root = e;
       if (!root) return;
-      this.storm = makeStormCloud(RULES.village.radius * 0.95);
-      this.storm.position.y = RULES.village.radius * 0.15;
-      makeOccludable(this.world.createTransformEntity(this.storm, { parent: root, persistent: true }));
+      const g = new GroupCtor();
+      g.name = 'Storm';
+      for (let i = 0; i < STORM.clouds; i++) {
+        const s = makeStormlet(STORM.cloudRadius * 1.6);
+        const spot = stormCloudSpot(i);
+        s.position.set(spot.x, LAYOUT.baseHeight, spot.z);
+        s.userData.level = 0;
+        s.userData.baseX = spot.x;
+        s.userData.baseZ = spot.z;
+        g.add(s);
+      }
+      this.storm = g;
+      makeOccludable(this.world.createTransformEntity(g, { parent: root, persistent: true }));
     }
-    const storm = this.storm;
-    storm.visible = this.stormLevel > 0.02;
-    if (!storm.visible) return;
-    storm.scale.setScalar(0.6 + 0.4 * this.stormLevel);
-    // Gusty sway and the cloud rumbling.
-    storm.rotation.y = Math.sin(time * 0.3) * 0.15;
-    this.animateDrops(storm, time * 1.4, this.stormLevel);
+    const clouds = game.sim.stormClouds;
+    let any = false;
+    for (let i = 0; i < this.storm.children.length; i++) {
+      const s = this.storm.children[i];
+      const present = stormy && clouds[i] === 1;
+      let level = s.userData.level as number;
+      // Swatted clouds vanish fast; regrowing ones drift back slowly.
+      level += ((present ? 1 : 0) - level) * Math.min(1, delta * (present ? 0.8 : 6));
+      s.userData.level = level;
+      s.visible = level > 0.02;
+      if (!s.visible) continue;
+      any = true;
+      const out = present ? 0 : (1 - level) * 0.04;
+      const bx = s.userData.baseX as number;
+      const bz = s.userData.baseZ as number;
+      const len = Math.hypot(bx, bz) || 1;
+      s.position.x = bx + (bx / len) * out + Math.sin(time * 0.4 + i) * 0.004;
+      s.position.z = bz + (bz / len) * out + Math.cos(time * 0.3 + i) * 0.004;
+      s.scale.setScalar(Math.max(0.01, present ? level : level * (1 + (1 - level))));
+      this.animateDrops(s, time * 1.4 + i, present ? 1 : 0);
+    }
+    this.storm.visible = any;
+  }
+
+  /** A lightning bolt flickers for a moment where it struck. */
+  private strike(x: number, z: number): void {
+    let root: Entity | undefined;
+    for (const e of this.queries.roots.entities) root = e;
+    if (!root) return;
+    const bolt = makeBolt();
+    bolt.position.set(x, LAYOUT.baseHeight, z);
+    const e = this.world.createTransformEntity(bolt, { parent: root });
+    e.addComponent(PowerEffect, { kind: 'bolt', age: 0, duration: 0.35, radius: 0.01 });
+    thunder();
   }
 
   private animateSparkles(children: { position: { x: number; y: number; z: number }; scale: { setScalar(s: number): void }; userData: Record<string, unknown> }[], t: number): void {

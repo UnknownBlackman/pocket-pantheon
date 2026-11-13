@@ -151,3 +151,13 @@ export function tumble(hard: boolean): void {
   if (hard) blip(1000, 0.35, 0.4, 'triangle', 0.18);
   else blip(500, 0.7, 0.15, 'sine', 0.12);
 }
+
+/** Distant thunder after lightning. */
+export function thunder(): void {
+  noise(1.4, 220, 0.3);
+}
+
+/** A whoosh as the god swats a storm cloud. */
+export function whoosh(): void {
+  noise(0.25, 1400, 0.12);
+}

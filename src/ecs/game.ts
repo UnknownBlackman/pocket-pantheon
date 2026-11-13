@@ -29,8 +29,17 @@ export interface GameState {
   presence: GodPresence;
 }
 
+/** `?fresh` in the page URL starts a brand-new village (first-visit tutorial included). */
+function wantsFresh(): boolean {
+  try {
+    return new URLSearchParams(globalThis.location?.search ?? '').has('fresh');
+  } catch {
+    return false;
+  }
+}
+
 function initialState(): GameState {
-  const loaded = loadWorld(browserStorage());
+  const loaded = wantsFresh() ? null : loadWorld(browserStorage());
   if (loaded) {
     const w = loaded.world;
     console.info(`[save] loaded village (day ${w.dayIndex + 1}, session ${w.session})`);

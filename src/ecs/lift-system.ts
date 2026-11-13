@@ -10,7 +10,8 @@ import { makeDropMarker, DROP_IDLE, DROP_VALID } from '../art/drop-marker.ts';
 import { plop, squeal } from '../audio/sfx.ts';
 import { events } from '../core/events.ts';
 import { buildingAt, dropVillager, liftVillager, moveCarried } from '../sim/powers.ts';
-import { LAYOUT } from '../sim/rules.ts';
+import { hurt } from '../sim/life.ts';
+import { LAYOUT, LIFE } from '../sim/rules.ts';
 import { VillageRoot, VillagerView } from './components.ts';
 import { game } from './game.ts';
 
@@ -47,7 +48,8 @@ export class LiftSystem extends createSystem({
   }
 
   private onLift(e: Entity): void {
-    if (game.stage !== 'playing') {
+    const lifted = game.sim.villagers[e.getValue(VillagerView, 'simIndex') ?? -1];
+    if (game.stage !== 'playing' || !lifted || lifted.dead) {
       this.world.getSystem(GrabSystem)?.forceRelease(e);
       return;
     }
@@ -75,8 +77,11 @@ export class LiftSystem extends createSystem({
     if (!p) return;
     const v = game.sim.villagers[e.getValue(VillagerView, 'simIndex') ?? -1];
     if (!v || !v.carried) return;
+    const dropHeight = p.y - LAYOUT.baseHeight;
     const building = dropVillager(game.sim, v.id, p.x, p.z, events);
     plop(building !== undefined);
+    // Dropped from high up: the god's hand never kills, but it can hurt.
+    if (dropHeight > LIFE.hurtDropHeight) hurt(game.sim, v, events);
     console.info(`[lift] ${v.name} dropped on ${building ? building.id : 'open ground'} -> ${v.activity}`);
     // Stand upright again; SyncSystem lowers them back onto the table.
     e.object3D?.rotation.set(0, e.object3D.rotation.y, 0);

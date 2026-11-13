@@ -51,8 +51,33 @@ export class AnimationSystem extends createSystem({
             sy = 1 + Math.sin(t * 28) * 0.05;
             sx = 2 - sy;
             rz = s * 0.08;
+            if (v.limp > 0) {
+              // A lopsided, careful hobble.
+              rz = 0.18 + Math.max(0, s) * 0.12;
+              y = Math.max(0, s) * 0.002;
+            }
             break;
           }
+          case 'play': {
+            // Children bounce about.
+            const hop = Math.abs(Math.sin(t * 11));
+            y = hop * 0.008;
+            sy = hop < 0.15 ? 0.88 : 1.05;
+            sx = 2 - sy;
+            rz = Math.sin(t * 5.5) * 0.15;
+            break;
+          }
+          case 'mourn':
+            // Heads bowed in grief.
+            rx = 0.5 * ease;
+            sy = 0.94;
+            rz = Math.sin(t * 1.2) * 0.04;
+            break;
+          case 'dead':
+            // Lying where they fell.
+            rx = -1.45 * ease;
+            y = 0.004 * ease;
+            break;
           case 'farm': {
             const s = Math.sin(t * 6);
             rx = (0.35 + s * 0.25) * ease;

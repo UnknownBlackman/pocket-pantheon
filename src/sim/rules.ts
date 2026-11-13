@@ -369,7 +369,8 @@ export const STORM = {
   /** Little storm clouds over the village. */
   clouds: 9,
   cloudRing: 0.11,
-  cloudHeight: 0.16,
+  /** Matches the drawn cloud height (art/weather-art CLOUD_HEIGHT). */
+  cloudHeight: 0.14,
   cloudRadius: 0.02,
   /** Swatting a cloud costs this much Favor. */
   swatCost: 0.25,

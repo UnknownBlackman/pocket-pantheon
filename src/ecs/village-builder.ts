@@ -41,7 +41,9 @@ export function buildVillage(world: World, root: Entity, sim: SimWorld): void {
     makeOccludable(e);
   });
 
-  sim.villagers.forEach((v, i) => spawnVillagerView(world, root, sim, i));
+  sim.villagers.forEach((v, i) => {
+    if (!v.dead) spawnVillagerView(world, root, sim, i);
+  });
 }
 
 export function spawnVillagerView(world: World, root: Entity, sim: SimWorld, index: number): Entity {

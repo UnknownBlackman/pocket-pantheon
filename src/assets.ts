@@ -4,6 +4,7 @@ import {
   createCampfire,
   createDiorama,
   createField,
+  createGrave,
   createHut,
   createShrine,
   createTablet,
@@ -28,5 +29,6 @@ export default defineAssets({
   shrine: createShrine(),
   campfire: createCampfire(),
   tablet: createTablet(),
+  grave: createGrave(),
   'welcome-panel': uikitml('welcome.uikitml', 'Welcome Panel'),
 });

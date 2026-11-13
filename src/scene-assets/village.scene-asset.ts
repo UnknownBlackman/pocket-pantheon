@@ -405,3 +405,21 @@ export function createTablet(): Group {
   root.add(k.mesh('TabletStone'));
   return root;
 }
+
+// ------------------------------------------------------------------ Grave
+
+/** A 2 cm grave: a rounded headstone over an earth mound with wildflowers. Faces +Z. */
+export function createGrave(): Group {
+  const k = new Kit();
+  k.ico(0.009, HUE.earth, { y: 0.001, z: 0.006, sx: 0.8, sy: 0.35, sz: 1.3 });
+  k.box(0.011, 0.012, 0.003, HUE.stone, { y: 0.006 });
+  k.ico(0.0055, HUE.stone, { y: 0.012, sx: 1, sy: 0.55, sz: 0.27 });
+  k.box(0.006, 0.0008, 0.0008, HUE.stoneDark, { y: 0.009, z: 0.0016 });
+  k.box(0.0008, 0.004, 0.0008, HUE.stoneDark, { y: 0.0095, z: 0.0016 });
+  k.ico(0.0014, 0xe8c14a, { x: -0.003, y: 0.003, z: 0.011 });
+  k.ico(0.0012, 0xc85a8a, { x: 0.003, y: 0.003, z: 0.012 });
+  const root = new Group();
+  root.name = 'Grave';
+  root.add(k.mesh('Headstone'));
+  return root;
+}

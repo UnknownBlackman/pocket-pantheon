@@ -4,6 +4,9 @@ import { VILLAGE_ROOT_NAME, SYSTEM_PRIORITY as P } from './core/constants.js';
 import { AnimationSystem } from './ecs/animation-system.js';
 import { AudioSystem } from './ecs/audio-system.js';
 import { ChronicleSystem } from './ecs/chronicle-system.js';
+import { GuideSystem } from './ecs/guide-system.js';
+import { LifeSystem } from './ecs/life-system.js';
+import { SpeechSystem } from './ecs/speech-system.js';
 import { EffectsSystem } from './ecs/effects-system.js';
 import { GazeBubbleSystem } from './ecs/gaze-bubble-system.js';
 import { HandFxSystem } from './ecs/hand-fx-system.js';
@@ -51,6 +54,9 @@ World.create(
     .registerSystem(GazeBubbleSystem, { priority: P.ui })
     .registerSystem(UISystem, { priority: P.ui })
     .registerSystem(ChronicleSystem, { priority: P.ui })
+    .registerSystem(GuideSystem, { priority: P.ui })
+    .registerSystem(SpeechSystem, { priority: P.ui })
+    .registerSystem(LifeSystem, { priority: P.effects })
     .registerSystem(PanelSystem, { priority: P.ui })
     .registerSystem(SaveSystem, { priority: P.save });
 

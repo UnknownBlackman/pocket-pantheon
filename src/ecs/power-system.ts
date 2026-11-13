@@ -11,11 +11,13 @@ import { createSystem, Grabbed, Vector3 } from '@iwsdk/core';
 import type { Entity } from '@iwsdk/core';
 import { makeProgressRing, makeSparkles, setRingProgress } from '../art/effects-art.ts';
 import type { ProgressRing } from '../art/effects-art.ts';
-import { buzz, chime, rainSound, shelterSound } from '../audio/sfx.ts';
+import { buzz, chime, rainSound, shelterSound, whoosh } from '../audio/sfx.ts';
+import { SIDES } from '../sim/presence.ts';
+import { stormCloudSpot, swatCloud } from '../sim/storm.ts';
 import { makeRainCloud, makeShelterDome } from '../art/weather-art.ts';
 import { events } from '../core/events.ts';
 import { blessBuilding, blessVillager, rain, shelter } from '../sim/powers.ts';
-import { GESTURES, LAYOUT, RULES } from '../sim/rules.ts';
+import { GESTURES, LAYOUT, RULES, STORM } from '../sim/rules.ts';
 import { wristsApartForShelter } from '../xr/gestures.ts';
 import { choosePalmPower } from '../xr/palm-powers.ts';
 import type { PalmInput, PalmMode } from '../xr/palm-powers.ts';
@@ -97,6 +99,36 @@ export class PowerSystem extends createSystem({
     }
     if (active) this.updatePalmPowers(delta);
     else this.resetPalm();
+    if (active) this.updateSwat(delta);
+  }
+
+  // ---------------------------------------------------------------- Swatting the storm
+
+  private swatBuzzIn = 0;
+
+  /** A hand sweeping quickly through a storm cloud scatters it (0.25 Favor each). */
+  private updateSwat(delta: number): void {
+    this.swatBuzzIn = Math.max(0, this.swatBuzzIn - delta);
+    const sim = game.sim;
+    if (sim.weather !== 'storm') return;
+    const reach = STORM.cloudRadius * 2 + 0.025;
+    for (const side of SIDES) {
+      const h = game.presence.hands[side];
+      if (!h.present || h.speed < STORM.swatSpeed) continue;
+      for (let i = 0; i < sim.stormClouds.length; i++) {
+        if (!sim.stormClouds[i]) continue;
+        const c = stormCloudSpot(i);
+        if (Math.hypot(h.x - c.x, h.y - c.y, h.z - c.z) > reach) continue;
+        const result = swatCloud(sim, i, events);
+        if (result === 'swatted' || result === 'calmed') {
+          whoosh();
+          if (result === 'calmed') chime();
+        } else if (result === 'no-favor' && this.swatBuzzIn <= 0) {
+          buzz();
+          this.swatBuzzIn = 1.5;
+        }
+      }
+    }
   }
 
   // ---------------------------------------------------------------- Rain / Shelter
@@ -246,6 +278,7 @@ export class PowerSystem extends createSystem({
     let bestD = reach;
     for (const e of this.queries.villagers.entities) {
       if (e.hasComponent(Grabbed) || !e.object3D) continue;
+      if (game.sim.villagers[e.getValue(VillagerView, 'simIndex') ?? -1]?.dead) continue;
       const p = e.object3D.position;
       const dx = t.x - p.x;
       const dy = t.y - (p.y + VILLAGER_CENTRE);

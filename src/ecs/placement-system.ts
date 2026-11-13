@@ -26,6 +26,8 @@ import type { Entity } from '@iwsdk/core';
 import { chime } from '../audio/sfx.ts';
 import { events } from '../core/events.ts';
 import { LAYOUT, RULES } from '../sim/rules.ts';
+import { aliveCount } from '../sim/life.ts';
+import { startGuide } from '../sim/tutorial.ts';
 import { startSession } from '../sim/world.ts';
 import { setHintPanel } from '../ui/hint-panel.ts';
 import { showToast, uiState } from '../ui/ui-state.ts';
@@ -151,13 +153,15 @@ export class PlacementSystem extends createSystem({
       game.away = null;
     } else if (game.returning) {
       const title = game.sim.title ? `, ${game.sim.title}` : '';
-      showToast(`Welcome back${title}`, `Your ${game.sim.villagers.length} villagers remember you.`, 6);
+      showToast(`Welcome back${title}`, `Your ${aliveCount(game.sim)} villagers remember you.`, 6);
     } else {
       showToast(
         'Welcome, little god',
         'This village is yours to guide. It will settle on your table when it finds one.',
         7,
       );
+      // First visit: Elder Ama teaches the old ways (skippable).
+      if (game.sim.guide.step === 'none') startGuide(game.sim, events);
     }
     game.returning = false;
   }

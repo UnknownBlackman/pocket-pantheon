@@ -97,19 +97,21 @@ export class HandFxSystem extends createSystem({
     for (const m of this.markers) m.visible = false;
     if (!active || (!hands.left.tracked && !hands.right.tracked)) return;
     this.player.head.getWorldPosition(this.head);
+    let next = 0;
     for (const e of this.queries.villagers.entities) {
       const obj = e.object3D;
       const index = e.getValue(VillagerView, 'simIndex') ?? -1;
-      const marker = this.markers[index];
+      const marker = this.markers[next];
       if (!obj || !marker || !obj.visible) continue;
       const v = game.sim.villagers[index];
-      if (!v || v.ride === 'ride') continue; // riders sit on top of the hand
+      if (!v || v.dead || v.ride === 'ride') continue; // riders sit on top of the hand
       obj.getWorldPosition(this.target);
       this.target.y += 0.02;
       if (!this.hiddenBehindHand()) continue;
       marker.position.set(this.target.x, this.target.y + MARKER_ABOVE + Math.sin(time * 4 + index) * 0.004, this.target.z);
       marker.rotation.y = time * 2;
       marker.visible = true;
+      next++;
     }
   }
 

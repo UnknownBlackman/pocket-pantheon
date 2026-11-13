@@ -11,9 +11,10 @@ import type { Entity, Object3D } from '@iwsdk/core';
 import { chime, setMuted, tick } from '../audio/sfx.ts';
 import { events } from '../core/events.ts';
 import { GESTURES, LAYOUT } from '../sim/rules.ts';
-import { completeStep, currentHint } from '../sim/tutorial.ts';
+import { guideStep, skipGuide } from '../sim/tutorial.ts';
+import { PressTracker, touchedButton } from '../ui/poke.ts';
 import { CanvasPanel } from '../ui/canvas-panel.ts';
-import { drawHint, drawPause } from '../ui/panels.ts';
+import { drawButtons, drawHint, drawPause } from '../ui/panels.ts';
 import type { PanelButton } from '../ui/panels.ts';
 import { showToast, uiState } from '../ui/ui-state.ts';
 import { atChestHeight, isPalmFacing } from '../xr/gestures.ts';
@@ -37,6 +38,8 @@ const PAUSE_BUTTONS: readonly PanelButton[] = [
 const PAUSE_BUTTONS_ARMED: readonly PanelButton[] = PAUSE_BUTTONS.map((b) =>
   b.id === 'restart' ? { ...b, label: 'Yes, start over' } : b,
 );
+const SKIP_BUTTONS: readonly PanelButton[] = [{ id: 'skip', label: 'Skip tutorial', x: 400, y: 250, w: 210, h: 56 }];
+const NO_BUTTONS: readonly PanelButton[] = [];
 /** Hint panel position in village space: above the back of the diorama. */
 const HINT_LOCAL = new Vector3(0, LAYOUT.baseHeight + 0.24, -0.2);
 /** A fingertip within this distance of a panel's surface touches it. */
@@ -67,7 +70,7 @@ export class UISystem extends createSystem({
   private local = new Vector3();
 
   init(): void {
-    this.hint = this.makePanel(640, 280, 0.3, 'HintPanel');
+    this.hint = this.makePanel(640, 320, 0.3, 'HintPanel');
     this.pause = this.makePanel(640, 380, 0.3, 'PausePanel');
     this.handsPanel = this.makePanel(640, 300, 0.32, 'HandsNeededPanel');
     drawHint(
@@ -77,18 +80,6 @@ export class UISystem extends createSystem({
     );
 
     this.cleanupFuncs.push(
-      events.on('villager.dropped', (p) => {
-        if (p.buildingId) completeStep(game.sim, 'lift');
-      }),
-      events.on('power.used', (p) => {
-        completeStep(game.sim, p.kind);
-      }),
-      events.on('villager.inspected', () => {
-        completeStep(game.sim, 'gaze');
-      }),
-      events.on('villager.climbed', () => {
-        completeStep(game.sim, 'ride');
-      }),
       events.on('power.failed', (p) => {
         showToast(
           'Not enough Favor',
@@ -140,32 +131,41 @@ export class UISystem extends createSystem({
       this.hintBody = 'Pinch the ring and drag to move it. Pinch the air to plant your village there.';
       return 'Plant your village';
     }
-    if (game.stage !== 'playing' || game.sim.phase !== 'day') return '';
-    const h = currentHint(game.sim);
-    if (!h) return '';
-    if (h.step === 'complete') {
-      if (!game.sim.tutorialDone.includes('complete-shown')) {
-        game.sim.tutorialDone.push('complete-shown');
-        showToast(h.title, h.body, 8);
-        chime();
-      }
-      return '';
-    }
-    this.hintBody = h.body;
-    return h.title;
+    if (game.stage !== 'playing') return '';
+    // The guided tutorial's current step (first visit only).
+    const step = guideStep(game.sim);
+    if (!step) return '';
+    this.hintBody = step.body;
+    this.hintSkip = true;
+    return step.title;
   }
+
+  /** True while the hint shows a tutorial step (with a Skip button). */
+  private hintSkip = false;
+  private skipPress = new PressTracker();
 
   private updateHint(inXR: boolean): void {
     const mesh = this.hint.mesh;
+    this.hintSkip = false;
     const title = inXR && !game.paused && !this.handsPanel.mesh.visible ? this.pickHint() : '';
     if (!title) {
       mesh.visible = false;
       return;
     }
-    const key = `${title}|${this.hintBody}`;
+    const buttons = this.hintSkip ? SKIP_BUTTONS : NO_BUTTONS;
+    const touched = this.hintSkip ? touchedButton(this.hint, buttons, this.local) : null;
+    const key = `${title}|${this.hintBody}|${this.hintSkip}|${touched}`;
     if (key !== this.hintKey) {
       this.hintKey = key;
       drawHint(this.hint, title, this.hintBody);
+      if (buttons.length) {
+        drawButtons(this.hint, buttons, touched);
+        this.hint.commit();
+      }
+    }
+    if (this.skipPress.update(touched, 1 / 72) === 'skip') {
+      skipGuide(game.sim, events);
+      chime();
     }
     // Above the ghost while placing, else above the back of the village.
     if (uiState.placing) {

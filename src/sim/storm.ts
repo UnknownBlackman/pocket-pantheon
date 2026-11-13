@@ -28,7 +28,7 @@ export function stormStrength(world: World): number {
 export function stormCloudSpot(i: number): { x: number; y: number; z: number } {
   const a = (i / STORM.clouds) * Math.PI * 2 + (i % 2) * 0.35;
   const r = STORM.cloudRing * (0.55 + (i % 3) * 0.28);
-  return { x: Math.cos(a) * r, y: STORM.cloudHeight + (i % 2) * 0.02, z: Math.sin(a) * r };
+  return { x: Math.cos(a) * r, y: STORM.cloudHeight, z: Math.sin(a) * r };
 }
 
 export type SwatResult = 'swatted' | 'calmed' | 'no-favor' | 'gone';

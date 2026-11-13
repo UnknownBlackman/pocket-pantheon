@@ -6,6 +6,7 @@
 import { createSystem, Grabbed } from '@iwsdk/core';
 import type { Material, Mesh } from '@iwsdk/core';
 import { PALETTE } from '../scene-assets/village-materials.ts';
+import { villagerScale } from '../sim/life.ts';
 import { LAYOUT, PRESENCE, RULES } from '../sim/rules.ts';
 import type { Building, World as SimWorld } from '../sim/types.ts';
 import { BuildingView, VillagerView } from './components.ts';
@@ -49,6 +50,8 @@ export class SyncSystem extends createSystem({
       if (!obj || !v) continue;
 
       const p = game.presence;
+      if (v.dead) continue; // lying where they fell (LifeSystem fades them out)
+      obj.scale.setScalar(villagerScale(v.age));
       if (v.ride === 'ride' && v.rideHand && p.hands[v.rideHand].present) {
         // Sitting on the god's palm: stick to the live hand, not the 10 Hz sim.
         const h = p.hands[v.rideHand];

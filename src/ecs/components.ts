@@ -37,12 +37,22 @@ export const DioramaView = createComponent('DioramaView', {});
 export const PowerEffect = createComponent('PowerEffect', {
   kind: {
     type: Types.Enum,
-    enum: { Bless: 'bless', Rain: 'rain', Shelter: 'shelter' },
+    enum: { Bless: 'bless', Rain: 'rain', Shelter: 'shelter', Bolt: 'bolt' },
     default: 'bless',
   },
   age: { type: Types.Float32, default: 0 },
   duration: { type: Types.Float32, default: 1 },
   radius: { type: Types.Float32, default: 0.05 },
+});
+
+/** A villager view playing its death (lying down, fading) before removal. */
+export const Dying = createComponent('Dying', {
+  left: { type: Types.Float32, default: 3 },
+});
+
+/** A grave in the graveyard; `grave` indexes World.graves. */
+export const GraveView = createComponent('GraveView', {
+  grave: { type: Types.Int16, default: -1 },
 });
 
 /** The chronicle stone tablet beside the shrine. */

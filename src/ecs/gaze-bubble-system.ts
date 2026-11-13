@@ -32,6 +32,13 @@ const ACTIVITY_TEXT: Record<string, string> = {
   pray: 'praying',
   panic: 'panicking!',
   cheer: 'celebrating',
+  play: 'playing',
+  mourn: 'mourning',
+  awe: 'in awe',
+  wave: 'waving',
+  ride: 'riding your hand',
+  hide: 'hiding',
+  daze: 'dazed',
 };
 
 export class GazeBubbleSystem extends createSystem({
@@ -143,6 +150,7 @@ export class GazeBubbleSystem extends createSystem({
   private centre(e: Entity): boolean {
     const obj = e.object3D;
     if (!obj || !obj.visible) return false;
+    if (game.sim.villagers[e.getValue(VillagerView, 'simIndex') ?? -1]?.dead) return false;
     obj.getWorldPosition(this.villagerPos);
     this.villagerPos.y += 0.02;
     return true;
@@ -226,6 +234,9 @@ export class GazeBubbleSystem extends createSystem({
     ctx.fillStyle = UI_COLORS.title;
     ctx.font = `700 34px ${UI_FONT}`;
     ctx.fillText(v.name, 24, 48);
+    ctx.fillStyle = UI_COLORS.dim;
+    ctx.font = `500 20px ${UI_FONT}`;
+    ctx.fillText(v.age < 13 ? `child, ${v.age}` : `${v.age}${v.limp > 0 ? ', limping' : ''}`, 24 + Math.min(150, v.name.length * 19), 48);
     ctx.fillStyle = UI_COLORS.dim;
     ctx.font = `500 22px ${UI_FONT}`;
     const doing = isDependent(v) && v.activity === 'idle' ? 'waiting for a sign' : ACTIVITY_TEXT[v.activity] ?? v.activity;

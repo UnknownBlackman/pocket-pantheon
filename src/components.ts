@@ -3,6 +3,8 @@ import {
   BuildingView,
   ChronicleTablet,
   DioramaView,
+  Dying,
+  GraveView,
   FavorPips,
   PowerEffect,
   VillageRoot,
@@ -17,4 +19,6 @@ export default defineComponents([
   PowerEffect,
   FavorPips,
   ChronicleTablet,
+  Dying,
+  GraveView,
 ]);
