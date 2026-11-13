@@ -94,17 +94,18 @@ function ground(k: Kit, rand: () => number): void {
   }
 
   // Trampled earth around the campfire.
-  k.cyl(0.075, 0.075, 0.0005, 14, HUE.dirtDark, { y: TOP });
-  k.cyl(0.062, 0.062, 0.0006, 12, HUE.dirt, { y: TOP + 0.0001 });
+  k.cyl(0.058, 0.058, 0.0005, 12, HUE.dirtDark, { y: TOP, sz: 0.9 });
+  k.cyl(0.048, 0.048, 0.0006, 11, HUE.dirt, { y: TOP + 0.0001, ry: 0.4 });
 
   // Worn paths: overlapping irregular stepping patches from the fire outwards.
   for (const [a, b] of PATHS) {
     const len = Math.hypot(b.x - a.x, b.z - a.z);
-    for (let d = 0.06; d < len - 0.03; d += 0.009) {
+    for (let d = 0.05; d < len - 0.035; d += 0.0075) {
+      if (rand() < 0.18) continue; // grass breaking through the worn track
       const t = d / len;
-      const jx = (rand() - 0.5) * 0.006;
-      const jz = (rand() - 0.5) * 0.006;
-      const s = 0.009 + rand() * 0.006;
+      const jx = (rand() - 0.5) * 0.007;
+      const jz = (rand() - 0.5) * 0.007;
+      const s = 0.0055 + rand() * 0.004;
       k.cyl(s, s, 0.0005, 6, vary(HUE.dirt, rand, 0.07), {
         x: a.x + (b.x - a.x) * t + jx,
         y: TOP,
@@ -174,9 +175,11 @@ function oak(k: Kit, x: number, z: number, h: number, rand: () => number): void 
 /** Trees stand at the back and sides only, so they never block the player's view. */
 function trees(k: Kit, rand: () => number): void {
   let i = 0;
-  for (let deg = 150; deg <= 390; deg += 17) {
+  for (let n = 0; n < 30; n++) {
+    // Two staggered rows round the back and sides.
+    const deg = 150 + (n % 15) * 16 + (n >= 15 ? 8 : 0);
     const a = (deg * Math.PI) / 180;
-    const r = R * 0.86;
+    const r = R * (n >= 15 ? 0.77 : 0.86);
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r;
     const inPalisade = deg >= PALISADE_FROM - 4 && deg <= PALISADE_TO + 4;
