@@ -8,7 +8,7 @@
  *   dusk, just the lute at night, and drums and a darker mode in a storm.
  * Instruments are synthesised: a plucked string (Karplus-Strong) for lute
  * and harp, a recorder with breath and vibrato, a hurdy-gurdy drone, a frame
- * drum with jingles, and a small hall reverb.
+ * drum, and a small hall reverb.
  * Notes are scheduled a bar at a time, a little ahead of the clock, so the
  * music never depends on the frame rate.
  */
@@ -26,7 +26,7 @@ const LOOKAHEAD = 0.4;
 const TICK_MS = 60;
 const STEPS = 6; // eighth notes per 6/8 bar
 /** The plucked strings sit behind the melody: softer and darker. */
-const LUTE_LEVEL = 0.55;
+const LUTE_LEVEL = 0.60;
 const LUTE_TONE_HZ = 1500;
 const PREF_KEY = 'tabletop-gods-music';
 
@@ -332,24 +332,6 @@ function drum(out: Out, t: number, vel: number, high = false): void {
   }
 }
 
-function jingle(out: Out, t: number, vel: number): void {
-  if (!noiseBuf) return;
-  const ac = out.ac;
-  const n = ac.createBufferSource();
-  n.buffer = noiseBuf;
-  n.playbackRate.value = 0.8 + Math.random() * 0.4;
-  const hp = ac.createBiquadFilter();
-  hp.type = 'highpass';
-  hp.frequency.value = 6500;
-  const g = ac.createGain();
-  g.gain.setValueAtTime(vel, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-  n.connect(hp).connect(g);
-  send(out, g, 0.4);
-  n.start(t);
-  n.stop(t + 0.14);
-}
-
 function bell(out: Out, midi: number, t: number, vel: number): void {
   const ac = out.ac;
   const f = mtof(midi);
@@ -510,9 +492,6 @@ class Player {
       } else {
         drum(out, t0 + jitter(), 0.34);
         drum(out, t0 + 3 * eighth + jitter(), 0.2);
-        drum(out, t0 + 5 * eighth + jitter(), 0.1, true);
-        jingle(out, t0 + 1 * eighth + jitter(), 0.05);
-        jingle(out, t0 + 4 * eighth + jitter(), 0.06);
       }
     }
 
