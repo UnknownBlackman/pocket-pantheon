@@ -26,6 +26,15 @@ function audio(): AudioContext | null {
   }
 }
 
+/**
+ * The shared context and master output, for the music (audio/music.ts).
+ * Creating the context must happen during a user gesture to be audible.
+ */
+export function audioBus(): { ctx: AudioContext; master: GainNode } | null {
+  const ac = audio();
+  return ac && master ? { ctx: ac, master } : null;
+}
+
 export function setMuted(value: boolean): void {
   muted = value;
   try {

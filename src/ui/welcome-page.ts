@@ -7,6 +7,7 @@
 import { VisibilityState } from '@iwsdk/core';
 import type { World } from '@iwsdk/core';
 import { FRESH_FLAG, game } from '../ecs/game.ts';
+import { music } from '../audio/music.ts';
 import { aliveCount } from '../sim/life.ts';
 
 export function setupWelcomePage(world: World): void {
@@ -27,7 +28,29 @@ export function setupWelcomePage(world: World): void {
     enter.textContent = 'Return to the village';
   }
 
-  enter.addEventListener('click', () => world.launchXR());
+  // Browsers keep sound off until the page is touched: the first tap or key
+  // starts the welcome music.
+  const unlock = (): void => music.unlock();
+  document.addEventListener('pointerdown', unlock, { capture: true });
+  document.addEventListener('keydown', unlock, { capture: true });
+
+  const musicBtn = document.getElementById('music') as HTMLButtonElement | null;
+  if (musicBtn) {
+    const label = (): void => {
+      musicBtn.textContent = music.enabled ? '♪ Music on' : '♪ Music off';
+      musicBtn.setAttribute('aria-pressed', String(music.enabled));
+    };
+    label();
+    musicBtn.addEventListener('click', () => {
+      music.setEnabled(!music.enabled);
+      label();
+    });
+  }
+
+  enter.addEventListener('click', () => {
+    music.unlock();
+    world.launchXR();
+  });
 
   let armed = false;
   fresh.addEventListener('click', () => {
