@@ -20,71 +20,7 @@ export { createDiorama } from './diorama.scene-asset.ts';
 
 // ------------------------------------------------------------------ Villagers
 
-/** Tunic colours by villager index (also used for speech-bubble name tabs). */
-export const TUNICS = [0xa8433a, 0x4d6a9a, 0xc9963e, 0x6a8a3e, 0xc8b48c, 0x8a5a3a, 0x7a4a6a, 0x4a7a72];
-const SKINS = [0xe0b48c, 0xc98d62, 0x9a6640, 0x6e4a32];
-const HAIRS = [0x3b2a20, 0x6b4428, 0xc8a050, 0x8a3a20, 0x2a2420];
-
-/**
- * A 4 cm villager in medieval dress. Hierarchy: Villager > Body (the
- * squash/stretch pivot at the feet) > Figure (one merged mesh). `variant`
- * picks tunic colour, skin, hair and headwear (hood, straw hat or bare).
- */
-export function createVillager(variant = 0): Group {
-  const tunic = TUNICS[variant % TUNICS.length];
-  const skin = SKINS[(variant * 3 + 1) % SKINS.length];
-  const hair = HAIRS[(variant * 7 + 2) % HAIRS.length];
-  const darker = vary(tunic, () => 0, 0.25); // deterministic darker shade
-  const hose = variant % 2 ? 0x4a3a30 : 0x5a5248;
-  const k = new Kit();
-
-  // Legs and shoes.
-  for (const sx of [-0.0027, 0.0027]) {
-    k.box(0.0032, 0.008, 0.0034, hose, { x: sx, y: 0.004 });
-    k.box(0.0036, 0.0016, 0.0048, HUE.woodDark, { x: sx, y: 0.0008, z: 0.0006 });
-  }
-  // Tunic, belt and buckle.
-  k.cyl(0.0062, 0.0094, 0.017, 7, tunic, { y: 0.0068 });
-  k.cyl(0.0078, 0.0078, 0.0018, 7, HUE.woodDark, { y: 0.0118 });
-  k.box(0.0018, 0.0018, 0.001, HUE.gold, { y: 0.0127, z: 0.0078 });
-  // Arms hanging at the sides, with hands.
-  for (const side of [-1, 1]) {
-    k.bar(side * 0.0066, 0.0225, 0, side * 0.0095, 0.0125, 0.0015, 0.0028, tunic);
-    k.ico(0.0017, skin, { x: side * 0.0097, y: 0.0115, z: 0.0017 });
-  }
-  // Head with a face: eyes and a little nose.
-  k.ico(0.0075, skin, { y: 0.0305 }, 1);
-  for (const ex of [-0.0026, 0.0026]) k.box(0.0012, 0.0014, 0.0008, 0x2a1e18, { x: ex, y: 0.0312, z: 0.0071 });
-  k.box(0.0012, 0.0014, 0.0014, vary(skin, () => 0, 0.12), { y: 0.0296, z: 0.0076 });
-
-  // Headwear.
-  const style = variant % 3;
-  if (style === 0) {
-    // Hood with a short cape over the shoulders.
-    k.add(new SphereGeometry(0.0086, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.62), darker, {
-      y: 0.0312, z: -0.0012, rx: -0.45,
-    });
-    k.cyl(0.0085, 0.0098, 0.0035, 8, darker, { y: 0.0215 });
-  } else if (style === 1) {
-    // Hair under a wide straw hat.
-    k.add(new SphereGeometry(0.0079, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.5), hair, { y: 0.0316 });
-    k.cyl(0.0125, 0.0125, 0.0011, 10, HUE.hay, { y: 0.0352 });
-    k.cyl(0.0058, 0.0068, 0.0045, 8, HUE.hay, { y: 0.0355 });
-    k.cyl(0.0069, 0.0069, 0.0012, 8, HUE.banner, { y: 0.0358 });
-  } else {
-    // Bare head: hair with a little knot at the back.
-    k.add(new SphereGeometry(0.0080, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.55), hair, { y: 0.0314 });
-    k.ico(0.0028, hair, { y: 0.0335, z: -0.0068 });
-  }
-
-  const root = new Group();
-  root.name = 'Villager';
-  const body = new Group();
-  body.name = 'Body';
-  body.add(k.mesh('Figure'));
-  root.add(body);
-  return root;
-}
+export { createVillager, TUNICS } from './villager.scene-asset.ts';
 
 // ------------------------------------------------------------------ Cottage
 
