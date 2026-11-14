@@ -17,6 +17,10 @@ export interface GameState {
   stage: GameStage;
   /** True while the pause panel is open. */
   paused: boolean;
+  /** The god has walked away from the village: its clock waits (AwaySystem). */
+  godAway: boolean;
+  /** The god is carrying the village to a new spot (PlacementSystem). */
+  moving: boolean;
   /** Which placement source planted the village. */
   placementSource: 'none' | 'plane' | 'hit-test' | 'fallback';
   /** True when this save came back from an earlier visit. */
@@ -56,6 +60,8 @@ function initialState(): GameState {
       sim: w,
       stage: 'placing',
       paused: false,
+      godAway: false,
+      moving: false,
       placementSource: 'none',
       returning: true,
       away: loaded.away,
@@ -68,6 +74,8 @@ function initialState(): GameState {
     sim: createWorld(Date.now() >>> 0),
     stage: 'placing',
     paused: false,
+    godAway: false,
+    moving: false,
     placementSource: 'none',
     returning: false,
     away: null,

@@ -95,6 +95,13 @@ describe('riding the god\'s palm', () => {
     assert.equal(p.hideHand, null, 'no hide-and-seek during the guide');
   });
 
+  it('both palms up is lifting the village, not an invitation', () => {
+    const { w, p } = inviteWorld(59);
+    hand(p, 'left', { x: -0.26, y: 0.02, z: 0.0, palmUp: true, tilt: 5 });
+    run(w, p, 6);
+    assert.ok(w.villagers.every((x) => x.ride === 'none'));
+  });
+
   it('an open palm up beside the village invites the faithful aboard', () => {
     const { w, p } = inviteWorld(53);
     run(w, p, 6);

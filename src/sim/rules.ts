@@ -393,3 +393,40 @@ export const STORM = {
   calmFaith: 0.02,
   calmInitiative: -0.01,
 } as const;
+
+/** Walking away from the village holds its day clock (ecs/away-system.ts). */
+export const AWAY = {
+  /** Head further than this from the village centre (horizontal, metres)... */
+  distance: 1.5,
+  /** ...for this long, and the village waits for the god. */
+  seconds: 3,
+  /** Coming back within this distance resumes it. */
+  returnDistance: 1.2,
+} as const;
+
+/**
+ * Moving the village (xr/village-carry.ts): both hands open, palms up, at
+ * opposite edges of the village, held still, lift it like a tray.
+ */
+export const CARRY = {
+  holdSeconds: 1.5,
+  /** Palms count as at the edge between these fractions of the village radius. */
+  edgeInner: 0.6,
+  edgeOuter: 1.4,
+  /** Palm height above the village surface (metres). */
+  minAbove: -0.05,
+  maxAbove: 0.1,
+  /** Palm-up: palm normal at least this much upward (dot with +Y). */
+  palmUpDot: 0.6,
+  /** The two palms must be on opposite sides (dot of directions below this). */
+  oppositeDot: -0.5,
+  stillSpeed: 0.12,
+  /** While carried: set it down when a palm turns over this far (normal Y below)... */
+  releaseDot: 0.2,
+  /** ...or the hands spread this much wider than when they lifted it (metres). */
+  releaseSpread: 0.2,
+  /** How quickly the village follows the hands (per second). */
+  followRate: 12,
+  /** Only set it down on a table no more than this far below (metres). */
+  dropReach: 0.6,
+} as const;

@@ -97,7 +97,7 @@ export class PowerSystem extends createSystem({
   update(delta: number): void {
     const root = this.root();
     const rootObj = root?.object3D;
-    const active = game.stage === 'playing' && !game.paused && !!rootObj && game.sim.phase === 'day';
+    const active = game.stage === 'playing' && !game.paused && !game.moving && !!rootObj && game.sim.phase === 'day';
     for (const h of HANDEDNESS) {
       const state = this.poke[h];
       const hand = hands[h];

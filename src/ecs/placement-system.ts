@@ -11,6 +11,12 @@
  * When a surface is found it glides down onto it and is anchored there. If
  * none turns up within LAYOUT.surfaceSearchSeconds it stays afloat (and is
  * anchored where it floats). Outside XR the village sits at a preview spot.
+ *
+ * Moving it later takes a deliberate gesture (xr/village-carry.ts): both
+ * palms up at opposite edges, held still while a ring fills, lifts the
+ * village like a tray. It follows the hands; turning a palm over or
+ * spreading the hands sets it down, gliding onto a table below if there is
+ * one (else it stays afloat there). Not during the tutorial.
  */
 import {
   createSystem,
@@ -23,19 +29,24 @@ import {
   XRPlane,
 } from '@iwsdk/core';
 import type { Entity } from '@iwsdk/core';
-import { chime } from '../audio/sfx.ts';
+import { makeProgressRing, setRingProgress } from '../art/effects-art.ts';
+import type { ProgressRing } from '../art/effects-art.ts';
+import { chime, whoosh } from '../audio/sfx.ts';
 import { events } from '../core/events.ts';
-import { LAYOUT, RULES } from '../sim/rules.ts';
+import { CARRY, LAYOUT, RULES } from '../sim/rules.ts';
 import { aliveCount } from '../sim/life.ts';
-import { startGuide } from '../sim/tutorial.ts';
+import { guideAllows, startGuide } from '../sim/tutorial.ts';
 import { startSession } from '../sim/world.ts';
 import { setHintPanel } from '../ui/hint-panel.ts';
 import { showToast, uiState } from '../ui/ui-state.ts';
 import { fallbackPosition, fitVillage, isTableHeight } from '../xr/placement.ts';
+import { hands } from '../xr/hand-state.ts';
+import { carryReleased, handSpread, liftPose } from '../xr/village-carry.ts';
+import { guideNudge } from './guide-nudge.ts';
 import { VillageRoot } from './components.ts';
 import { game } from './game.ts';
 
-type State = 'idle' | 'arriving' | 'floating' | 'settling' | 'settled';
+type State = 'idle' | 'arriving' | 'floating' | 'settling' | 'settled' | 'carried';
 type Source = 'plane' | 'hit-test' | 'fallback';
 
 /** Where the village sits in the flat browser preview (no XR). */
@@ -67,6 +78,12 @@ export class PlacementSystem extends createSystem({
   private tmp2 = new Vector3();
   private headQ = new Quaternion();
   private up = new Vector3(0, 1, 0);
+  // Carrying the village.
+  private liftHold = 0;
+  private liftRing: ProgressRing | null = null;
+  private carryOffset = new Vector3();
+  private carrySpread = 0;
+  private mid = new Vector3();
 
   init(): void {
     this.cleanupFuncs.push(
@@ -198,6 +215,10 @@ export class PlacementSystem extends createSystem({
         obj.position.copy(this.floatBase);
         this.finish(root, 'fallback');
       }
+    } else if (this.state === 'settled') {
+      this.updateLift(root, delta);
+    } else if (this.state === 'carried') {
+      this.updateCarried(root, delta);
     } else if (this.state === 'settling') {
       this.settleT = Math.min(1, this.settleT + delta / LAYOUT.settleSeconds);
       const t = this.settleT;
@@ -206,6 +227,116 @@ export class PlacementSystem extends createSystem({
       obj.scale.setScalar(this.fromScale + (this.toScale - this.fromScale) * ease);
       if (t >= 1) this.finish(root, this.settleSource);
     }
+  }
+
+  // ---------------------------------------------------------------- Carrying it elsewhere
+
+  private midpoint(out: Vector3): Vector3 {
+    const l = hands.left.palm;
+    const r = hands.right.palm;
+    return out.set((l.x + r.x) / 2, (l.y + r.y) / 2, (l.z + r.z) / 2);
+  }
+
+  /** Settled: watch for the two-palm lift and fill a ring around the village. */
+  private updateLift(root: Entity, delta: number): void {
+    const obj = root.object3D!;
+    const inXR = this.world.visibilityState.peek() !== VisibilityState.NonImmersive;
+    const scale = obj.scale.x;
+    this.tmp.copy(obj.position);
+    this.tmp.y += LAYOUT.baseHeight * scale;
+    const posed =
+      inXR && !game.paused && liftPose(hands.left, hands.right, this.tmp, RULES.village.radius * scale);
+    if (posed && !guideAllows(game.sim, 'move')) {
+      // The tutorial comes first.
+      this.liftHold += delta;
+      if (this.liftHold > 0.5) guideNudge();
+      if (this.liftRing) this.liftRing.visible = false;
+      return;
+    }
+    this.liftHold = posed ? this.liftHold + delta : 0;
+    const ring = this.ensureLiftRing(root);
+    if (!ring) return;
+    ring.visible = this.liftHold > 0.15;
+    if (!ring.visible) return;
+    const progress = Math.min(1, this.liftHold / CARRY.holdSeconds);
+    setRingProgress(ring, progress, 0xffe7a8);
+    if (progress >= 1) this.startCarry(root);
+  }
+
+  private ensureLiftRing(root: Entity): ProgressRing | null {
+    if (this.liftRing) return this.liftRing;
+    this.liftRing = makeProgressRing(RULES.village.radius + 0.025, 0xffe7a8);
+    this.liftRing.position.y = LAYOUT.baseHeight + 0.004;
+    this.liftRing.visible = false;
+    this.world.createTransformEntity(this.liftRing, { parent: root, persistent: true });
+    return this.liftRing;
+  }
+
+  private startCarry(root: Entity): void {
+    const obj = root.object3D!;
+    this.removeAnchor(root);
+    this.state = 'carried';
+    this.liftHold = 0;
+    if (this.liftRing) this.liftRing.visible = false;
+    game.moving = true;
+    this.carryOffset.subVectors(obj.position, this.midpoint(this.mid));
+    this.carrySpread = handSpread(hands.left, hands.right);
+    whoosh();
+    showToast('Carrying the village', 'Lower it onto a table, then turn your palms over to set it down.', 5);
+    console.info('[placement] the god lifts the village');
+  }
+
+  /** Carried: follow the hands; set down on letting go. */
+  private updateCarried(root: Entity, delta: number): void {
+    const obj = root.object3D!;
+    const inXR = this.world.visibilityState.peek() !== VisibilityState.NonImmersive;
+    if (!inXR || carryReleased(hands.left, hands.right, this.carrySpread)) {
+      this.setDown(root);
+      return;
+    }
+    this.midpoint(this.mid).add(this.carryOffset);
+    obj.position.lerp(this.mid, 1 - Math.exp(-CARRY.followRate * Math.min(delta, 0.1)));
+  }
+
+  /** Let go: glide onto a table below if there is one, else stay afloat here. */
+  private setDown(root: Entity): void {
+    const obj = root.object3D!;
+    game.moving = false;
+    if (this.findTableBelow(obj.position, obj.scale.x)) {
+      this.startSettle(obj);
+      return;
+    }
+    showToast('No table there', 'The village floats where you left it. Lift it again to move it.', 5);
+    this.finish(root, 'fallback');
+  }
+
+  /** The highest table-height plane below `pos` that the village fits on. */
+  private findTableBelow(pos: Vector3, scale: number): boolean {
+    const floor = this.floorY();
+    let bestY = -Infinity;
+    for (const e of this.queries.planes.entities) {
+      try {
+        const plane = e.getValue(XRPlane, '_plane') as (XRPlane & { semanticLabel?: string }) | undefined;
+        const obj = e.object3D;
+        if (!plane || !obj || plane.orientation !== 'horizontal') continue;
+        obj.getWorldPosition(this.tmp);
+        const labelled = plane.semanticLabel?.toLowerCase() === 'table';
+        if (!labelled && !isTableHeight(this.tmp.y - floor)) continue;
+        if (this.tmp.y > pos.y + 0.08 || this.tmp.y < pos.y - CARRY.dropReach || this.tmp.y <= bestY) continue;
+        this.tmp2.copy(pos);
+        obj.worldToLocal(this.tmp2);
+        const fit = fitVillage(plane.polygon, { x: this.tmp2.x, z: this.tmp2.z }, RULES.village.radius * scale);
+        if (!fit || Math.hypot(fit.x - this.tmp2.x, fit.z - this.tmp2.z) > RULES.village.radius) continue;
+        bestY = this.tmp.y;
+        this.settleTo.set(fit.x, 0, fit.z);
+        obj.localToWorld(this.settleTo);
+        this.toScale = Math.min(scale, fit.scale);
+        this.settleSource = 'plane';
+      } catch (err) {
+        console.warn('[placement] bad plane', err);
+      }
+    }
+    return bestY > -Infinity;
   }
 
   private startSettle(obj: NonNullable<Entity['object3D']>): void {

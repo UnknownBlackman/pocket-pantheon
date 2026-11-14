@@ -234,9 +234,12 @@ function updateRiding(
 ): void {
   const h = p.hands[side];
   const reach = RULES.village.radius + 0.08;
+  // Both palms up at once is lifting the whole village, not an invitation.
+  const otherUp = p.hands[side === 'left' ? 'right' : 'left'];
   const inviting =
     day &&
     guideAllows(world, 'ride') &&
+    !(otherUp.present && otherUp.palmUp) &&
     h.present &&
     h.palmUp &&
     h.open &&

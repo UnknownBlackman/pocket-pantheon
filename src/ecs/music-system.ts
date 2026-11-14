@@ -25,7 +25,7 @@ export class MusicSystem extends createSystem({}) {
     else if (sim.phase !== 'day') mood = 'dusk';
     else if (sim.timeOfDay >= RULES.session.nightStart) mood = 'night';
     music.setMood(mood);
-    music.setDucked(game.paused);
+    music.setDucked(game.paused || game.godAway);
     // Wind, fire and birds only around the village itself.
     ambience.set(playing && !game.paused ? mood : 'off');
   }

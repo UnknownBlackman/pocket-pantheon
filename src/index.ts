@@ -3,6 +3,7 @@ import projectOptions from 'virtual:iwsdk-project';
 import { VILLAGE_ROOT_NAME, SYSTEM_PRIORITY as P } from './core/constants.js';
 import { AnimationSystem } from './ecs/animation-system.js';
 import { AudioSystem } from './ecs/audio-system.js';
+import { AwaySystem } from './ecs/away-system.js';
 import { MusicSystem } from './ecs/music-system.js';
 import { ChronicleSystem } from './ecs/chronicle-system.js';
 import { GuideSystem } from './ecs/guide-system.js';
@@ -58,6 +59,7 @@ World.create(
     .registerSystem(HandGestureSystem, { priority: P.handGesture })
     .registerSystem(HandPresenceSystem, { priority: P.handPresence })
     .registerSystem(PlacementSystem, { priority: P.placement })
+    .registerSystem(AwaySystem, { priority: P.placement })
     .registerSystem(PowerSystem, { priority: P.power })
     .registerSystem(SimSystem, { priority: P.sim })
     .registerSystem(LiftSystem, { priority: P.lift })

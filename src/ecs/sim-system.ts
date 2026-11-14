@@ -20,7 +20,7 @@ export class SimSystem extends createSystem({}) {
     // Only an immersive session advances the village. The flat browser
     // preview shows it idling, so the session is not used up before XR.
     const inXR = this.world.visibilityState.peek() === VisibilityState.Visible;
-    if (game.stage !== 'playing' || game.paused || !inXR) {
+    if (game.stage !== 'playing' || game.paused || game.godAway || game.moving || !inXR) {
       this.accumulator = 0;
       return;
     }

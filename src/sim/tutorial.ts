@@ -189,7 +189,7 @@ function completes(step: GuideStepId, e: GuideEvent): boolean {
 }
 
 /** Player actions the guide can allow or hold back. */
-export type GuideAction = 'lift' | 'bless' | 'ride' | 'rain' | 'shelter' | 'calm' | 'hide';
+export type GuideAction = 'lift' | 'bless' | 'ride' | 'rain' | 'shelter' | 'calm' | 'hide' | 'move';
 
 const STEP_ACTION: Partial<Record<GuideStepId, GuideAction>> = {
   lift: 'lift',
