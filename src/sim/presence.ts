@@ -20,6 +20,7 @@ import { hurt } from './life.ts';
 import { buildingAt } from './powers.ts';
 import { random, randomRange } from './random.ts';
 import { PRESENCE as P, RULES } from './rules.ts';
+import { guideAllows } from './tutorial.ts';
 import type { Activity, HandSide, Intent, Villager, World } from './types.ts';
 import { assignIntent } from './villager.ts';
 
@@ -235,6 +236,7 @@ function updateRiding(
   const reach = RULES.village.radius + 0.08;
   const inviting =
     day &&
+    guideAllows(world, 'ride') &&
     h.present &&
     h.palmUp &&
     h.open &&
@@ -407,7 +409,8 @@ function updateHideAndSeek(world: World, p: GodPresence, dt: number, day: boolea
     return;
   }
 
-  if (!day) {
+  // No hide-and-seek before the tutorial is done.
+  if (!day || !guideAllows(world, 'hide')) {
     p.rest.left = p.rest.right = 0;
     return;
   }

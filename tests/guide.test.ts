@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { STORM } from '../src/sim/rules.ts';
 import { swatCloud } from '../src/sim/storm.ts';
-import { GUIDE, guideEvent, guideField, guideStep, skipGuide, startGuide } from '../src/sim/tutorial.ts';
+import { GUIDE, guideAllows, guideEvent, guideField, guideStep, skipGuide, startGuide } from '../src/sim/tutorial.ts';
 import { createWorld, runFor } from '../src/sim/world.ts';
 
 describe('guided tutorial', () => {
@@ -40,6 +40,18 @@ describe('guided tutorial', () => {
     runFor(w, 5);
     assert.ok(w.timeOfDay > 0, 'the day begins');
     assert.equal(GUIDE.length, 9);
+  });
+
+  it("allows only the current step's action", () => {
+    const w = createWorld(22);
+    assert.ok(guideAllows(w, 'rain'), 'everything is allowed outside the guide');
+    startGuide(w);
+    assert.ok(!guideAllows(w, 'lift'), 'nothing but looking during the welcome');
+    guideEvent(w, { kind: 'inspected' });
+    assert.ok(guideAllows(w, 'lift'));
+    assert.ok(!guideAllows(w, 'rain'));
+    assert.ok(!guideAllows(w, 'bless'));
+    assert.ok(!guideAllows(w, 'hide'), 'no hide-and-seek during the guide');
   });
 
   it('can be skipped at any time', () => {

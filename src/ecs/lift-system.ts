@@ -12,8 +12,10 @@ import { events } from '../core/events.ts';
 import { buildingAt, dropVillager, liftVillager, moveCarried } from '../sim/powers.ts';
 import { hurt } from '../sim/life.ts';
 import { LAYOUT, LIFE } from '../sim/rules.ts';
+import { guideAllows } from '../sim/tutorial.ts';
 import { VillageRoot, VillagerView } from './components.ts';
 import { game } from './game.ts';
+import { guideNudge } from './guide-nudge.ts';
 
 export class LiftSystem extends createSystem({
   held: { required: [VillagerView, Grabbed] },
@@ -51,6 +53,12 @@ export class LiftSystem extends createSystem({
     const lifted = game.sim.villagers[e.getValue(VillagerView, 'simIndex') ?? -1];
     if (game.stage !== 'playing' || !lifted || lifted.dead) {
       this.world.getSystem(GrabSystem)?.forceRelease(e);
+      return;
+    }
+    // The tutorial teaches one thing at a time: no carrying before its step.
+    if (!guideAllows(game.sim, 'lift')) {
+      this.world.getSystem(GrabSystem)?.forceRelease(e);
+      guideNudge();
       return;
     }
     if (liftVillager(game.sim, this.simId(e), events)) {

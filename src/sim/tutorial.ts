@@ -80,9 +80,9 @@ export const GUIDE: readonly GuideStep[] = [
   },
   {
     id: 'swat',
-    title: 'Sweep the storm away',
-    body: 'Swat the little clouds with quick sweeps of your hand. Each costs a little Favor.',
-    elder: 'Now drive the clouds away!',
+    title: 'Calm the storm',
+    body: 'Rest your hand on each little cloud and hold it there until its ring fills.',
+    elder: 'Now calm the clouds, one by one!',
     target: 'village',
   },
   {
@@ -186,6 +186,27 @@ function completes(step: GuideStepId, e: GuideEvent): boolean {
     case 'pause':
       return e.kind === 'paused';
   }
+}
+
+/** Player actions the guide can allow or hold back. */
+export type GuideAction = 'lift' | 'bless' | 'ride' | 'rain' | 'shelter' | 'calm' | 'hide';
+
+const STEP_ACTION: Partial<Record<GuideStepId, GuideAction>> = {
+  lift: 'lift',
+  bless: 'bless',
+  ride: 'ride',
+  rain: 'rain',
+  shelter: 'shelter',
+  swat: 'calm',
+};
+
+/**
+ * During the guide only the current step's action works, so the player
+ * learns one thing at a time. Outside the guide everything is allowed.
+ */
+export function guideAllows(world: World, action: GuideAction): boolean {
+  if (!world.guide.active) return true;
+  return STEP_ACTION[world.guide.step as GuideStepId] === action;
 }
 
 /** Practice never fails for lack of Favor: top it up during power steps. */

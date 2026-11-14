@@ -5,6 +5,7 @@ import { makePresence, updatePresence } from '../src/sim/presence.ts';
 import type { GodPresence, HandSample } from '../src/sim/presence.ts';
 import { PRESENCE, RULES } from '../src/sim/rules.ts';
 import { divineTitle, TITLES } from '../src/sim/title.ts';
+import { startGuide } from '../src/sim/tutorial.ts';
 import type { HandSide, World } from '../src/sim/types.ts';
 import { createWorld, tick } from '../src/sim/world.ts';
 
@@ -83,6 +84,16 @@ describe('riding the god\'s palm', () => {
     hand(p, 'right', { x: 0.26, y: 0.02, z: 0.0, palmUp: true, tilt: 5 });
     return { w, p };
   }
+
+  it('the tutorial holds back riding and hide-and-seek until their step', () => {
+    const { w, p } = inviteWorld(58);
+    startGuide(w);
+    run(w, p, 6);
+    assert.ok(w.villagers.every((x) => x.ride === 'none'), 'no riders before the ride step');
+    hand(p, 'right', { x: 0.1, y: 0.02, z: 0.1 });
+    run(w, p, PRESENCE.restSeconds + 1);
+    assert.equal(p.hideHand, null, 'no hide-and-seek during the guide');
+  });
 
   it('an open palm up beside the village invites the faithful aboard', () => {
     const { w, p } = inviteWorld(53);

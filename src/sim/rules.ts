@@ -375,17 +375,21 @@ export const LIFE = {
 /** The storm and swatting it away (sim/storm.ts). */
 export const STORM = {
   /** Little storm clouds over the village. */
-  clouds: 9,
+  clouds: 6,
   cloudRing: 0.11,
   /** Matches the drawn cloud height (art/weather-art CLOUD_HEIGHT). */
   cloudHeight: 0.14,
   cloudRadius: 0.02,
-  /** Swatting a cloud costs this much Favor. */
+  /** Calming a cloud costs this much Favor. */
   swatCost: 0.25,
-  /** The hand must pass this fast (m/s) through a cloud to scatter it. */
-  swatSpeed: 0.2,
-  /** A scattered cloud regrows after this long. */
-  regrowSeconds: 14,
+  /** Rest a hand on a cloud this long (like a blessing) to calm it. */
+  calmHoldSeconds: 1.0,
+  /** A hand this close to a cloud's centre is resting on it (metres). */
+  calmReach: 0.045,
+  /** A hand moving faster than this (m/s) is passing by, not resting. */
+  calmMaxSpeed: 0.25,
+  /** A calmed cloud regrows after this long (unless all are calmed). */
+  regrowSeconds: 25,
   calmFaith: 0.02,
   calmInitiative: -0.01,
 } as const;

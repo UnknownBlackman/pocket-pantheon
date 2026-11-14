@@ -61,7 +61,7 @@ const LINES: Record<BarkKind, readonly string[]> = {
   rain: ['Rain! Thank you!', 'The fields drink!', 'Bless this rain!'],
   sheltered: ['We\'re safe!', 'A golden roof!', 'The god protects us!'],
   calm: ['The sky clears!', 'The storm is gone!', 'Sunshine!'],
-  swat: ['Begone, cloud!', 'It\'s scattering!'],
+  swat: ['Hush, little cloud!', 'It\'s fading away!'],
   newborn: ['Welcome, little one!', 'A new child!'],
   mourn: ['Farewell, friend...', 'Rest well.', 'We will remember.'],
   limp: ['Ouch, my leg.', 'Easy does it...'],
