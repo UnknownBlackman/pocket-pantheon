@@ -3,10 +3,12 @@
  * - the welcome theme on the welcome page and while the village arrives;
  * - the village theme once play begins, following the time of day and the
  *   weather (day, dusk, night, storm);
+ * - wind, the campfire and birdsong around the village (audio/ambience.ts);
  * - quieter while the game is paused. When the headset blurs the app, the
  *   master mute in UISystem silences it with the sound effects.
  */
 import { createSystem, VisibilityState } from '@iwsdk/core';
+import { ambience } from '../audio/ambience.ts';
 import { music } from '../audio/music.ts';
 import type { MusicMood } from '../audio/music.ts';
 import { RULES } from '../sim/rules.ts';
@@ -24,5 +26,7 @@ export class MusicSystem extends createSystem({}) {
     else if (sim.timeOfDay >= RULES.session.nightStart) mood = 'night';
     music.setMood(mood);
     music.setDucked(game.paused);
+    // Wind, fire and birds only around the village itself.
+    ambience.set(playing && !game.paused ? mood : 'off');
   }
 }

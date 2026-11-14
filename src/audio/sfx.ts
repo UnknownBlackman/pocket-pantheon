@@ -35,6 +35,10 @@ export function audioBus(): { ctx: AudioContext; master: GainNode } | null {
   return ac && master ? { ctx: ac, master } : null;
 }
 
+export function isMuted(): boolean {
+  return muted;
+}
+
 export function setMuted(value: boolean): void {
   muted = value;
   try {

@@ -83,6 +83,23 @@ export function setupWelcomePage(world: World): void {
       .catch(() => notSupported(enter, note));
   }
 
+  // The scroll always fits in one screen: shrink it rather than scroll.
+  const scroll = page.querySelector<HTMLElement>('.page');
+  if (scroll) {
+    const fit = (): void => {
+      // offsetHeight ignores scaling, so this measures the natural size.
+      const room = window.innerHeight * 0.92;
+      const h = scroll.offsetHeight;
+      const s = h > room ? room / h : 1;
+      // The separate `scale` property leaves the unroll animation's transform alone.
+      scroll.style.scale = s < 1 ? s.toFixed(3) : '';
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    // Fonts and the returning-player line can change its height.
+    new ResizeObserver(fit).observe(scroll);
+  }
+
   // Shown only outside XR.
   world.visibilityState.subscribe((vis) => {
     page.classList.toggle('hidden', vis !== VisibilityState.NonImmersive);

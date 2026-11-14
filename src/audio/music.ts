@@ -25,6 +25,9 @@ const FADE_SECONDS = 2.5;
 const LOOKAHEAD = 0.4;
 const TICK_MS = 60;
 const STEPS = 6; // eighth notes per 6/8 bar
+/** The plucked strings sit behind the melody: softer and darker. */
+const LUTE_LEVEL = 0.55;
+const LUTE_TONE_HZ = 1500;
 const PREF_KEY = 'tabletop-gods-music';
 
 // ---------------------------------------------------------------- Score
@@ -191,7 +194,8 @@ function pluckBuffer(ac: AudioContext, midi: number): { buf: AudioBuffer; rate: 
   const d = buf.getChannelData(0);
   let lp = 0;
   for (let i = 0; i < period; i++) {
-    lp += 0.45 * (Math.random() * 2 - 1 - lp);
+    // A soft, thumb-like pluck: heavily smoothed noise has few sharp overtones.
+    lp += 0.22 * (Math.random() * 2 - 1 - lp);
     d[i] = lp;
   }
   const decay = midi < 52 ? 0.997 : 0.995;
@@ -230,9 +234,14 @@ function pluck(out: Out, midi: number, t: number, vel: number, wet = 0.6): void 
   const src = out.ac.createBufferSource();
   src.buffer = buf;
   src.playbackRate.value = rate;
+  // Darken the string: a gut-strung lute, not a steel guitar.
+  const tone = out.ac.createBiquadFilter();
+  tone.type = 'lowpass';
+  tone.frequency.value = LUTE_TONE_HZ;
+  tone.Q.value = 0.5;
   const g = out.ac.createGain();
-  g.gain.value = vel;
-  src.connect(g);
+  g.gain.value = vel * LUTE_LEVEL;
+  src.connect(tone).connect(g);
   send(out, g, wet);
   src.start(t);
 }

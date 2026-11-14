@@ -13,11 +13,12 @@ import { TUNICS } from '../scene-assets/village.scene-asset.ts';
 import { drawSpeechBubble } from '../ui/bubble.ts';
 import type { BarkKind } from '../sim/barks.ts';
 import { causeText, isChild, villagerScale } from '../sim/life.ts';
-import { LAYOUT } from '../sim/rules.ts';
+import { LAYOUT, LIFE } from '../sim/rules.ts';
 import { stormStrength } from '../sim/storm.ts';
 import type { DeathCause, Villager } from '../sim/types.ts';
 import { CanvasPanel, ribbon } from '../ui/canvas-panel.ts';
 import { narrate, say, speech } from '../ui/speech.ts';
+import { villagerVoice } from '../audio/voices.ts';
 import { showToast } from '../ui/ui-state.ts';
 import { VillageRoot, VillagerView } from './components.ts';
 import { game } from './game.ts';
@@ -275,6 +276,13 @@ export class SpeechSystem extends createSystem({
         name: v.name,
         tab: tunicCss(req.index),
         mood: req.mood,
+      });
+      villagerVoice({
+        index: req.index,
+        text: req.text,
+        mood: req.mood,
+        child: v.age < LIFE.adultAge,
+        elder: req.index === 0 || v.age >= LIFE.oldAgeFrom,
       });
       this.lastSaid[req.index] = this.clock;
       if (!req.priority) this.gap = GLOBAL_GAP;
