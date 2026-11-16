@@ -134,7 +134,9 @@ function lathe(profile: readonly (readonly [number, number])[], phiStart = 0, ph
 }
 
 type Headwear = 'hood' | 'straw' | 'coif' | 'cap' | 'bare' | 'elder';
-const HEADWEAR: readonly Headwear[] = ['hood', 'straw', 'coif', 'cap', 'bare'];
+/** Men wear hoods, felt caps, straw hats or a bowl cut; women coifs, straw hats or a braid. */
+const MEN_HEADWEAR: readonly Headwear[] = ['hood', 'cap', 'straw', 'bare'];
+const WOMEN_HEADWEAR: readonly Headwear[] = ['coif', 'straw', 'bare'];
 
 interface Look {
   tunic: number;
@@ -142,18 +144,22 @@ interface Look {
   skin: number;
   hair: number;
   dress: boolean;
+  /** Long hair in a braid down the back. */
+  braid: boolean;
   headwear: Headwear;
 }
 
-function lookFor(variant: number): Look {
+function lookFor(variant: number, female: boolean): Look {
   const elder = variant === 0;
+  const styles = female ? WOMEN_HEADWEAR : MEN_HEADWEAR;
   return {
     tunic: elder ? 0x6a4a8a : TUNICS[variant % TUNICS.length],
     accent: ACCENTS[(variant * 3 + 1) % ACCENTS.length],
     skin: SKINS[(variant * 3 + 1) % SKINS.length],
     hair: elder ? 0xd8d4cc : HAIRS[(variant * 7 + 2) % HAIRS.length],
-    dress: elder || variant % 2 === 1,
-    headwear: elder ? 'elder' : HEADWEAR[(variant * 2 + 1) % HEADWEAR.length],
+    dress: elder || female,
+    braid: female && !elder,
+    headwear: elder ? 'elder' : styles[(variant * 5 + 1) % styles.length],
   };
 }
 
@@ -327,6 +333,11 @@ function head(look: Look): Group {
   face.add(sphere(0.0011, 10, 8), new Color(look.skin).multiplyScalar(0.88).getHex(), { y: HEAD_C - 0.0006, z: 0.0086 });
   face.add(new TorusGeometry(0.0016, 0.00038, 6, 10, Math.PI), 0x7a2a22, { y: HEAD_C - 0.0022, z: 0.0081, rz: Math.PI });
   headwear(face, look);
+  if (look.braid) {
+    // A braid down the back of the head, tied with a ribbon.
+    face.add(new CapsuleGeometry(0.0019, 0.0075, 4, 10), look.hair, { y: HEAD_C - 0.0072, z: -0.0068, rx: 0.35 });
+    face.add(new TorusGeometry(0.0017, 0.0005, 6, 12), look.accent, { y: HEAD_C - 0.0118, z: -0.0052, rx: Math.PI / 2 + 0.35 });
+  }
 
   const eyes = new Sculpt();
   for (const side of [-1, 1]) {
@@ -345,13 +356,14 @@ function head(look: Look): Group {
 }
 
 /**
- * A 4 cm villager. `variant` (the villager's index) picks colours, outfit
- * (tunic and hose, or a long kirtle with an apron) and headwear (hood,
- * straw hat, linen coif, feathered cap or a bowl cut); variant 0 is the
- * elder, in a purple gown and shawl with silver hair.
+ * A 4 cm villager. `variant` (the villager's index) picks colours and
+ * headwear; `female` picks the outfit: women wear a long kirtle with an
+ * apron and a braid (coif, straw hat or bare), men a tunic and hose (hood,
+ * feathered cap, straw hat or a bowl cut). Variant 0 is the elder, in a
+ * purple gown and shawl with silver hair.
  */
-export function createVillager(variant = 0): Group {
-  const look = lookFor(variant);
+export function createVillager(variant = 0, female = variant % 2 === 0): Group {
+  const look = lookFor(variant, female);
   const body = new Group();
   body.name = 'Body';
   body.add(torso(look), leg(look, 1), leg(look, -1), arm(look, 1), arm(look, -1), head(look));

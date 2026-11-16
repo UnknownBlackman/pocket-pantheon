@@ -36,9 +36,13 @@ export type Intent = 'idle' | 'farm' | 'rest' | 'pray' | 'gather' | 'play';
 
 export type ChronicleRef = { entryIndex: number };
 
+/** 'f' for women and girls, 'm' for men and boys (looks, names, parents). */
+export type Sex = 'f' | 'm';
+
 export interface Villager {
   id: string;
   name: string;
+  sex: Sex;
   pos: Vec2;
   target: Vec2 | null;
   activity: Activity;

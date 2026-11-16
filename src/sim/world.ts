@@ -16,7 +16,7 @@ import { updateVillager } from './villager.ts';
 
 const R = RULES;
 
-import { NAMES } from './names.ts';
+import { FOUNDERS, NAMES } from './names.ts';
 
 /** Fixed layout of the starting village, metres from the centre. */
 export const START_BUILDINGS: ReadonlyArray<{ kind: BuildingKind; x: number; z: number }> = [
@@ -48,7 +48,8 @@ export function makeVillager(world: World, index: number): Villager {
   const r = 0.07 + random(world) * 0.03;
   return {
     id: `v${index}`,
-    name: NAMES[index % NAMES.length],
+    name: FOUNDERS[index]?.name ?? NAMES[index % NAMES.length],
+    sex: FOUNDERS[index]?.sex ?? (index % 2 ? 'm' : 'f'),
     pos: { x: Math.cos(angle) * r, z: Math.sin(angle) * r },
     target: null,
     activity: 'idle',

@@ -23,7 +23,8 @@ export const RULES = {
   },
 
   village: {
-    startVillagers: 8,
+    /** Elder Ama and four more: two men and two women (sim/names.ts FOUNDERS). */
+    startVillagers: 5,
     /**
      * Population cap, children included. Beyond this a 60 cm village gets
      * crowded, pinching picks the wrong villager and stories blur together.

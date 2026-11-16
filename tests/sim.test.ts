@@ -46,7 +46,7 @@ describe('seeded randomness', () => {
 describe('starting village', () => {
   it('has 8 villagers, 3 fields, 3 huts, 1 shrine and Favor 3', () => {
     const w = createWorld(1);
-    assert.equal(w.villagers.length, 8);
+    assert.equal(w.villagers.length, RULES.village.startVillagers);
     const count = (k: string) => w.buildings.filter((b) => b.kind === k).length;
     assert.equal(count('field'), 3);
     assert.equal(count('hut'), 3);

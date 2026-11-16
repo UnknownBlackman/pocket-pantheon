@@ -35,9 +35,9 @@ export function makeTablet(): Group {
   return g;
 }
 
-/** Each villager index gets its own look (tunic, skin, hair, headwear). */
-export function makeVillager(index: number): Group {
-  const g = cloneOf(`villager-${index}`, () => createVillager(index));
+/** Each villager index gets its own look (colours, skin, hair, headwear); women wear dresses. */
+export function makeVillager(index: number, female: boolean): Group {
+  const g = cloneOf(`villager-${index}-${female ? 'f' : 'm'}`, () => createVillager(index, female));
   g.add(makeBlobShadow(0.024));
   return g;
 }

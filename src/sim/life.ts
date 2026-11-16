@@ -119,7 +119,8 @@ export function makeChild(world: World, a: Villager, b: Villager, make: MakeVill
   const index = world.villagers.length;
   const child = make(world, index);
   child.id = `v${index}-${world.dayIndex}`;
-  child.name = pickName(world);
+  child.sex = random(world) < 0.5 ? 'f' : 'm';
+  child.name = pickName(world, child.sex);
   child.age = 0;
   child.parents = [a.id, b.id];
   child.homeId = a.homeId;
@@ -163,12 +164,13 @@ export function endOfYear(world: World, make: MakeVillager, bus?: EventBus): Yea
     return report;
   }
   if (world.food < LIFE.birthFood || random(world) >= LIFE.birthChance) return report;
-  // The two happiest adults become parents.
+  // The happiest adult and the happiest adult of the other sex become parents.
   const adults = world.villagers
     .filter((v) => !v.dead && !isChild(v) && v.age <= 50)
     .sort((x, y) => y.mood - x.mood);
-  if (adults.length < 2) return report;
-  const [a, b] = adults;
+  const a = adults[0];
+  const b = a ? adults.find((v) => v.sex !== a.sex) : undefined;
+  if (!a || !b) return report;
   const child = makeChild(world, a, b, make);
   world.food = Math.max(0, world.food - 10);
   addChronicle(world, 'born', { name: child.name, a: a.name, b: b.name }, [child.id, a.id, b.id], bus);

@@ -48,7 +48,7 @@ export function buildVillage(world: World, root: Entity, sim: SimWorld): void {
 
 export function spawnVillagerView(world: World, root: Entity, sim: SimWorld, index: number): Entity {
   const v = sim.villagers[index];
-  const obj = makeVillager(index);
+  const obj = makeVillager(index, v.sex === 'f');
   obj.name = `Villager:${v.name}`;
   obj.position.set(v.pos.x, LAYOUT.baseHeight, v.pos.z);
   const e = world.createTransformEntity(obj, { parent: root });

@@ -4,6 +4,7 @@
  * save fall back to a fresh village instead of crashing. Storage is passed
  * in so the logic can be tested in Node.
  */
+import { sexOfName } from '../sim/names.ts';
 import { fastForward } from '../sim/fastforward.ts';
 import { freshPresenceFields, freshSessionCounts } from '../sim/world.ts';
 import type { AwayReport } from '../sim/fastforward.ts';
@@ -48,6 +49,7 @@ export function deserializeWorld(json: string): World | null {
       v.deathCause ??= null;
       v.parents ??= [];
       v.limp ??= 0;
+      v.sex ??= sexOfName(v.name);
       v.starving ??= 0;
     }
     // Nobody is mid-ride or mid-hide after a reload.
