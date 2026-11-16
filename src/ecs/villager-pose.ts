@@ -201,6 +201,17 @@ export function poseFor(
       p.sy = 1 + Math.sin(t * 1.5) * 0.015;
       p.eyes = 0.12;
       break;
+    case 'sit':
+      // Sitting round the campfire, hands on knees, swaying to the music.
+      p.y = -0.0072 * ease;
+      p.legLx = p.legRx = -1.35 * ease;
+      p.armLx = p.armRx = -0.55 * ease;
+      p.armLz = -0.15;
+      p.armRz = 0.15;
+      p.headX = -0.1 + Math.sin(t * 0.7) * 0.08;
+      p.headY = Math.sin(t * 0.35) * 0.3;
+      p.rz = Math.sin(t * 0.9) * 0.04;
+      break;
     case 'pray':
       // Kneeling, hands together, bowing in time.
       p.y = -0.0042 * ease;

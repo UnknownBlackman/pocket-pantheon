@@ -112,6 +112,8 @@ export interface ParchmentStyle {
   deep?: string;
   /** Small diamond flourishes in the corners. */
   flourishes?: boolean;
+  /** Darken the edges like old paper (default true; off for crisp, high-contrast cards). */
+  aged?: boolean;
 }
 
 /** A parchment card with a soft shadow, a double ink border and flourishes. */
@@ -136,13 +138,15 @@ export function parchment(
   ctx.fillStyle = g;
   ctx.fill();
   ctx.restore();
-  // Aged edges: a faint darker rim inside the card.
-  const v = ctx.createRadialGradient(x + w / 2, y + h / 2, Math.min(w, h) * 0.35, x + w / 2, y + h / 2, Math.max(w, h) * 0.75);
-  v.addColorStop(0, 'rgba(120, 80, 30, 0)');
-  v.addColorStop(1, 'rgba(120, 80, 30, 0.18)');
-  roundRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = v;
-  ctx.fill();
+  if (style.aged !== false) {
+    // Aged edges: a faint darker rim inside the card.
+    const v = ctx.createRadialGradient(x + w / 2, y + h / 2, Math.min(w, h) * 0.35, x + w / 2, y + h / 2, Math.max(w, h) * 0.75);
+    v.addColorStop(0, 'rgba(120, 80, 30, 0)');
+    v.addColorStop(1, 'rgba(120, 80, 30, 0.18)');
+    roundRect(ctx, x, y, w, h, r);
+    ctx.fillStyle = v;
+    ctx.fill();
+  }
   // Double ink border.
   ctx.lineWidth = 4;
   ctx.strokeStyle = border;

@@ -35,13 +35,30 @@ interface MoodLook {
   ink: string;
 }
 
+/**
+ * Bright paper and near-black ink for strong contrast against passthrough;
+ * the mood shows in the tint, the border and the trim.
+ */
 const LOOKS: Record<BubbleMood, MoodLook> = {
-  calm: { light: '#f8eed6', deep: '#e9d5a8', border: '#7a5530', ink: UI_COLORS.ink },
-  joy: { light: '#fbf2d6', deep: '#efd89a', border: '#9a6a20', ink: UI_COLORS.ink },
-  sad: { light: '#eef2f4', deep: '#cfd9e0', border: '#4d5d6a', ink: '#24323d' },
-  alarm: { light: '#fde6d6', deep: '#f2b49a', border: '#a8322a', ink: '#4a140c' },
-  elder: { light: '#fdf4d8', deep: '#efdcaa', border: '#b8862b', ink: '#3a2414' },
+  calm: { light: '#fffdf6', deep: '#fff3d8', border: '#2e1c0e', ink: '#120a04' },
+  joy: { light: '#fffcea', deep: '#ffecb0', border: '#7a4a08', ink: '#120a04' },
+  sad: { light: '#fbfdff', deep: '#e3edf5', border: '#25384a', ink: '#0c1824' },
+  alarm: { light: '#fff6f0', deep: '#ffd7c4', border: '#b01e14', ink: '#3a0602' },
+  elder: { light: '#fffbee', deep: '#fbe9bc', border: '#7a4e10', ink: '#1e0c04' },
 };
+
+/** Dark or light text, whichever reads better on a CSS hex colour. */
+function inkFor(bg: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(bg);
+  if (!m) return '#ffffff';
+  const n = parseInt(m[1], 16);
+  const lin = (c: number) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const lum = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return lum > 0.28 ? '#140a04' : '#ffffff';
+}
 
 /** Draws one speech bubble into the panel (bottom-anchored: the tail tip is at the bottom centre). */
 export function drawSpeechBubble(panel: CanvasPanel, spec: BubbleSpec): void {
@@ -51,11 +68,11 @@ export function drawSpeechBubble(panel: CanvasPanel, spec: BubbleSpec): void {
   const maxText = W - MARGIN * 2 - PAD_X * 2;
 
   // Fit the text: shrink the font until it is at most three lines.
-  let size = 36;
+  let size = 40;
   let lines: string[] = [];
-  const weight = spec.mood === 'alarm' ? 900 : 700;
+  const weight = spec.mood === 'alarm' ? 900 : 800;
   const style = '';
-  for (; size >= 22; size -= 2) {
+  for (; size >= 24; size -= 2) {
     ctx.font = `${style}${weight} ${size}px ${UI_BODY}`;
     lines = layoutLines(ctx, spec.text, maxText);
     if (lines.length <= 3) break;
@@ -84,7 +101,7 @@ export function drawSpeechBubble(panel: CanvasPanel, spec: BubbleSpec): void {
   ctx.fillStyle = look.deep;
   ctx.fill();
   ctx.restore();
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 5;
   ctx.strokeStyle = look.border;
   ctx.beginPath();
   ctx.moveTo(cx - 18, bodyBottom - 2);
@@ -102,6 +119,7 @@ export function drawSpeechBubble(panel: CanvasPanel, spec: BubbleSpec): void {
       light: look.light,
       deep: look.deep,
       flourishes: spec.mood === 'elder',
+      aged: false,
     });
   }
   if (spec.mood === 'joy') {
@@ -112,17 +130,17 @@ export function drawSpeechBubble(panel: CanvasPanel, spec: BubbleSpec): void {
 
   // Name tab, overlapping the top-left edge.
   const name = spec.mood === 'elder' ? `Elder ${spec.name}` : spec.name;
-  ctx.font = `700 22px ${UI_FONT}`;
+  ctx.font = `800 24px ${UI_BODY}`;
   const tabW = ctx.measureText(name).width + 28;
   const tabX = bodyX + 18;
   const tabY = bodyTop - TAB_H / 2 - 4;
   roundRect(ctx, tabX, tabY, tabW, TAB_H - 8, 10);
   ctx.fillStyle = spec.mood === 'elder' ? '#8a2a1c' : spec.tab;
   ctx.fill();
-  ctx.lineWidth = 2.5;
-  ctx.strokeStyle = spec.mood === 'elder' ? '#e2b24a' : '#3a2414';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = spec.mood === 'elder' ? '#e2b24a' : '#1e1009';
   ctx.stroke();
-  ctx.fillStyle = spec.mood === 'elder' ? '#f6d88a' : '#fbf3e0';
+  ctx.fillStyle = spec.mood === 'elder' ? '#ffe7a0' : inkFor(spec.tab);
   ctx.textBaseline = 'middle';
   ctx.fillText(name, tabX + 14, tabY + (TAB_H - 8) / 2 + 1);
 

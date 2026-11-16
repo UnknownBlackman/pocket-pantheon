@@ -143,6 +143,16 @@ function decideChild(world: World, v: Villager): void {
 /** The decision rule: score each candidate action and pick the highest. */
 export function decide(world: World, v: Villager): void {
   if (world.phase !== 'day') {
+    // The evening: dance, sit round the fire, then home to bed (children first).
+    const evening = world.phaseTime / R.session.duskSeconds;
+    const bedtime = childOf(v) ? R.session.childBedFraction : R.session.bedFraction;
+    if (world.phase === 'ended' || evening >= bedtime) {
+      if (v.intent !== 'rest') {
+        const hut = buildingById(world, v.homeId) ?? nearestOfKind(world, v, 'hut');
+        assignIntent(world, v, 'rest', hut, Infinity);
+      }
+      return;
+    }
     const fire = nearestOfKind(world, v, 'campfire');
     if (v.intent !== 'gather') assignIntent(world, v, 'gather', fire, Infinity);
     return;
@@ -264,7 +274,9 @@ function doWork(world: World, v: Villager, dt: number, bus?: EventBus): void {
       break;
     }
     case 'gather': {
-      v.activity = world.phase === 'dusk' ? 'cheer' : 'idle';
+      // A short dance at the fire, then sitting round it.
+      const dancing = world.phaseTime < R.session.duskDanceFraction * R.session.duskSeconds;
+      v.activity = world.phase === 'dusk' ? (dancing ? 'cheer' : 'sit') : 'idle';
       break;
     }
     default:

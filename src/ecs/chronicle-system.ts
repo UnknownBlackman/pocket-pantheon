@@ -28,10 +28,15 @@ const NEW_DAY_BUTTONS: readonly PanelButton[] = [
   { id: 'new-day', label: 'Begin a new day', x: 170, y: 520, w: 380, h: 90 },
 ];
 const NO_BUTTONS: readonly PanelButton[] = [];
-/** Dusk panel position in village space: above the back of the diorama. */
-const DUSK_LOCAL = new Vector3(0, LAYOUT.baseHeight + 0.26, -0.18);
-/** Chronicle panel floats above the tablet. */
-const CHRONICLE_ABOVE = 0.2;
+/**
+ * Dusk panel in village space: over the near-left edge (the player sits at
+ * +Z), close enough to read, leaving the campfire in the middle in view.
+ * (The signboard takes the near-right.)
+ */
+const DUSK_LOCAL = new Vector3(-0.24, LAYOUT.baseHeight + 0.2, 0.14);
+/** Chronicle panel floats above the tablet, then is drawn this far towards the player to be readable. */
+const CHRONICLE_ABOVE = 0.16;
+const CHRONICLE_TOWARD_PLAYER = 0.35;
 const TABLET_POKE_RADIUS = 0.04;
 const CHRONICLE_OPEN_SECONDS = 30;
 const AWAY_SCROLL_SECONDS = 40;
@@ -55,8 +60,8 @@ export class ChronicleSystem extends createSystem({
   private awayLines: string[] | null = null;
 
   init(): void {
-    this.dusk = this.makePanel(720, 640, 0.34, 'DuskPanel');
-    this.chronicle = this.makePanel(720, 720, 0.3, 'ChroniclePanel');
+    this.dusk = this.makePanel(720, 640, 0.4, 'DuskPanel');
+    this.chronicle = this.makePanel(720, 720, 0.36, 'ChroniclePanel');
     this.cleanupFuncs.push(
       events.on('session.dusk', () => {
         this.press.reset();
@@ -199,7 +204,9 @@ export class ChronicleSystem extends createSystem({
         drawChronicle(this.chronicle, entries);
       }
     }
+    // Above the tablet, then brought most of the way towards the player.
     mesh.position.set(this.v.x, this.v.y + CHRONICLE_ABOVE, this.v.z);
+    mesh.position.lerp(this.head, CHRONICLE_TOWARD_PLAYER);
     mesh.lookAt(this.head);
     mesh.visible = true;
   }

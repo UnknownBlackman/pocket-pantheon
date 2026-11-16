@@ -148,7 +148,7 @@ export class SyncSystem extends createSystem({
       } else if ((v.activity === 'walk' || v.activity === 'panic') && v.target) {
         fx = v.target.x - v.pos.x;
         fz = v.target.z - v.pos.z;
-      } else if (v.activity === 'cheer' || v.activity === 'pray' || v.activity === 'farm') {
+      } else if (v.activity === 'cheer' || v.activity === 'pray' || v.activity === 'farm' || v.activity === 'sit') {
         const b = findBuilding(sim, v.targetId);
         if (b) {
           fx = b.pos.x - v.pos.x;

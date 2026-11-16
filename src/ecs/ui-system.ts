@@ -77,7 +77,8 @@ export class UISystem extends createSystem({
   init(): void {
     this.hint = this.makePanel(640, 360, 0.3, 'HintPanel');
     this.pause = this.makePanel(640, 380, 0.3, 'PausePanel');
-    this.handsPanel = this.makePanel(640, 300, 0.32, 'HandsNeededPanel');
+    // Tall enough for a four-line message clear of the bottom roller.
+    this.handsPanel = this.makePanel(640, 440, 0.32, 'HandsNeededPanel');
     drawHint(
       this.handsPanel,
       'Hand tracking needed',

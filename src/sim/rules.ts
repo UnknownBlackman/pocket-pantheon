@@ -18,6 +18,13 @@ export const RULES = {
     placeSeconds: 20,
     daySeconds: [120, 150, 150] as readonly number[],
     duskSeconds: 60,
+    /**
+     * The evening, as fractions of duskSeconds: everyone dances at the
+     * campfire, then sits round it; children go to bed first, then adults.
+     */
+    duskDanceFraction: 0.2,
+    childBedFraction: 0.55,
+    bedFraction: 0.7,
     /** Fraction of a day (timeOfDay) after which it counts as night. */
     nightStart: 0.8,
   },

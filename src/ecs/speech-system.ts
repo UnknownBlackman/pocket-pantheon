@@ -27,7 +27,7 @@ const BUBBLES = 3;
 /** Bubble canvas and size: about 13 cm wide, bottom-anchored on the tail. */
 const BUBBLE_PX_W = 560;
 const BUBBLE_PX_H = 300;
-const BUBBLE_W = 0.13;
+const BUBBLE_W = 0.16;
 const BUBBLE_H = (BUBBLE_W * BUBBLE_PX_H) / BUBBLE_PX_W;
 
 function tunicCss(index: number): string {

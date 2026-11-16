@@ -24,6 +24,7 @@ export type Activity =
   | 'hide' // hiding behind the god's resting hand
   | 'touch' // reaching up to touch the god's fingertip
   | 'bow' // a little bow to the god after being set down on a job
+  | 'sit' // sitting round the campfire at dusk
   // Life and death (sim/life.ts):
   | 'play' // children at play
   | 'mourn' // standing in grief for someone who died
