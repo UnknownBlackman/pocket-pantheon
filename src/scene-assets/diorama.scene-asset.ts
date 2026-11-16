@@ -6,7 +6,13 @@
  * animated chickens and a flutterable pennant.
  *
  * Origin at the bottom centre; the walkable surface is y = LAYOUT.baseHeight.
- * Static scenery is merged into one vertex-coloured mesh ('Scenery').
+ * Merged, vertex-coloured meshes:
+ * - 'Pedestal': the earth slab, its grass top and the stone rim (the
+ *   diorama box, shown in mid-air);
+ * - 'Scenery': patches, paths, trees, props and scatter (always shown);
+ * - 'DeskEdge': loose stones, twigs, dirt and moss feathering out past the
+ *   rim, shown instead of the pedestal on a real desk ("the living desk").
+ * userData.shadowSpots lists trees and props ({x, z, d}) for blob shadows.
  */
 import { Group } from '@iwsdk/core';
 import { LAYOUT, RULES } from '../sim/rules.ts';
@@ -39,6 +45,8 @@ const CLEAR: Record<string, number> = { field: 0.075, hut: 0.06, shrine: 0.065, 
 const TABLET = { x: 0.095, z: -0.2 };
 
 type Pt = { x: number; z: number };
+/** Where a blob shadow goes: centre and diameter. */
+type Spot = { x: number; z: number; d: number };
 
 function nearBuilding(x: number, z: number, extra = 0): boolean {
   for (const b of START_BUILDINGS) {
@@ -71,12 +79,61 @@ function onPath(x: number, z: number, width = 0.016): boolean {
 
 // ------------------------------------------------------------------ Ground
 
-function ground(k: Kit, rand: () => number): void {
-  // Layered earth sides: dark loam below, lighter soil above, grass on top.
+/** The diorama box: layered earth sides, dark loam below, grass on top. */
+function pedestal(k: Kit): void {
   k.cyl(R * 0.975, R * 0.93, H * 0.55, 36, HUE.earthDark);
   k.cyl(R * 0.99, R * 0.975, H * 0.45 - 0.003, 36, HUE.earth, { y: H * 0.55 });
   k.cyl(R * 0.975, R * 0.99, 0.003, 36, HUE.grass, { y: H - 0.003 });
+}
 
+/**
+ * On a real desk the village feathers out into it: moss and dirt fading out
+ * past where the rim would be, loose stones and runaway twigs.
+ */
+function deskEdge(k: Kit, rand: () => number): void {
+  for (let i = 0; i < 90; i++) {
+    const a = rand() * Math.PI * 2;
+    // Denser near the old rim, thinning outwards.
+    const r = R * (0.8 + Math.pow(rand(), 1.8) * 0.26);
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r;
+    if (nearBuilding(x, z)) continue;
+    const kind = rand();
+    if (kind < 0.4) {
+      // Moss and dirt specks, smaller further out.
+      const size = (0.004 + rand() * 0.008) * (1.15 - (r / R - 0.8) * 2.5);
+      const col = rand() < 0.55 ? vary(HUE.grassDark, rand, 0.06) : vary(HUE.dirt, rand, 0.08);
+      k.cyl(size, size, 0.0004, 6, col, { x, y: H, z, ry: rand() * 3, sz: 0.5 + rand() * 0.5 });
+    } else if (kind < 0.75) {
+      k.ico(0.0018 + rand() * 0.0028, vary(rand() < 0.3 ? HUE.stoneDark : HUE.stone, rand, 0.12), {
+        x,
+        y: H + 0.0008,
+        z,
+        sy: 0.55,
+        ry: rand() * 3,
+      });
+    } else if (kind < 0.9) {
+      // A twig.
+      const ta = rand() * Math.PI;
+      const len = 0.006 + rand() * 0.01;
+      k.bar(x, H + 0.0006, z, x + Math.cos(ta) * len, H + 0.0006, z + Math.sin(ta) * len, 0.0011, HUE.trunk);
+    } else {
+      // A grass tuft escaping onto the desk.
+      for (let b = 0; b < 3; b++) {
+        const ba = (b / 3) * Math.PI * 2 + rand();
+        k.cone(0.0012, 0.005 + rand() * 0.003, 3, vary(HUE.grassDark, rand, 0.08), {
+          x: x + Math.cos(ba) * 0.0014,
+          y: H,
+          z: z + Math.sin(ba) * 0.0014,
+          rx: Math.sin(ba) * 0.4,
+          rz: -Math.cos(ba) * 0.4,
+        });
+      }
+    }
+  }
+}
+
+function ground(k: Kit, rand: () => number): void {
   // Patchy grass: flat irregular patches of lighter and darker green.
   for (let i = 0; i < 46; i++) {
     const a = rand() * Math.PI * 2;
@@ -173,7 +230,7 @@ function oak(k: Kit, x: number, z: number, h: number, rand: () => number): void 
 }
 
 /** Trees stand at the back and sides only, so they never block the player's view. */
-function trees(k: Kit, rand: () => number): void {
+function trees(k: Kit, rand: () => number, spots: Spot[]): void {
   let i = 0;
   for (let n = 0; n < 30; n++) {
     // Two staggered rows round the back and sides.
@@ -187,6 +244,7 @@ function trees(k: Kit, rand: () => number): void {
     const h = 0.065 + rand() * 0.03;
     if (i++ % 2 === 0) pine(k, x, z, h, rand);
     else oak(k, x, z, h * 0.85, rand);
+    spots.push({ x, z, d: 0.045 });
   }
 }
 
@@ -253,10 +311,13 @@ function scatter(k: Kit, rand: () => number): void {
 export function createDiorama(): Group {
   const rand = seeded(1207);
   const k = new Kit();
+  const base = new Kit();
+  const spots: Spot[] = [];
+  pedestal(base);
+  rim(base, rand);
   ground(k, rand);
-  rim(k, rand);
   palisade(k, rand);
-  trees(k, rand);
+  trees(k, rand, spots);
   scatter(k, rand);
   well(k, PROPS.well.x, PROPS.well.z);
   woodpile(k, PROPS.woodpile.x, PROPS.woodpile.z, rand);
@@ -266,9 +327,19 @@ export function createDiorama(): Group {
   scarecrow(k, PROPS.scarecrow.x, PROPS.scarecrow.z);
   const poleTop = bannerPole(k, PROPS.banner.x, PROPS.banner.z);
 
+  for (const key of ['well', 'haystack', 'cart', 'barrels', 'woodpile'] as const) {
+    spots.push({ x: PROPS[key].x, z: PROPS[key].z, d: 0.035 });
+  }
+  const edge = new Kit();
+  deskEdge(edge, seeded(4411));
+
   const root = new Group();
   root.name = 'Diorama';
-  root.add(k.mesh('Scenery'));
+  root.add(base.mesh('Pedestal'), k.mesh('Scenery'));
+  const edgeMesh = edge.mesh('DeskEdge');
+  edgeMesh.visible = false;
+  root.add(edgeMesh);
+  root.userData.shadowSpots = spots;
 
   const pennant = makePennant();
   pennant.position.set(PROPS.banner.x, poleTop, PROPS.banner.z);

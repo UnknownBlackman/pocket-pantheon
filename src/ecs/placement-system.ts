@@ -17,6 +17,12 @@
  * village like a tray. It follows the hands; turning a palm over or
  * spreading the hands sets it down, gliding onto a table below if there is
  * one (else it stays afloat there). Not during the tutorial.
+ *
+ * The living desk: on a real surface (a plane or hit test) the diorama's
+ * earth pedestal sinks into the desk and the village ground sits right on
+ * it, with patches, paths and props growing out of the real desk and a
+ * feathered edge of stones, twigs and moss. In mid-air (fallback, or while
+ * carried) the solid diorama box comes back.
  */
 import {
   createSystem,
@@ -43,7 +49,7 @@ import { fallbackPosition, fitVillage, isTableHeight } from '../xr/placement.ts'
 import { hands } from '../xr/hand-state.ts';
 import { carryReleased, handSpread, liftPose } from '../xr/village-carry.ts';
 import { guideNudge } from './guide-nudge.ts';
-import { VillageRoot } from './components.ts';
+import { DioramaView, VillageRoot } from './components.ts';
 import { game } from './game.ts';
 
 type State = 'idle' | 'arriving' | 'floating' | 'settling' | 'settled' | 'carried';
@@ -58,7 +64,11 @@ const ARRIVE_DELAY = 0.5;
 export class PlacementSystem extends createSystem({
   roots: { required: [VillageRoot] },
   planes: { required: [XRPlane] },
+  dioramas: { required: [DioramaView] },
 }) {
+  /** 0 = diorama box, 1 = living desk; eases towards deskTarget. */
+  private deskBlend = 0;
+  private deskTarget = 0;
   private state: State = 'idle';
   private searchTime = 0;
   private arriveIn = 0;
@@ -116,6 +126,7 @@ export class PlacementSystem extends createSystem({
     root.object3D.rotation.set(0, 0, 0);
     root.object3D.scale.setScalar(1);
     root.object3D.visible = true;
+    this.deskTarget = this.deskBlend = 0;
     this.state = 'idle';
     game.placementSource = 'fallback';
     game.stage = 'playing';
@@ -149,6 +160,7 @@ export class PlacementSystem extends createSystem({
     obj.rotation.set(0, Math.atan2(this.head.x - this.ahead.x, this.head.z - this.ahead.z), 0);
     obj.scale.setScalar(1);
     obj.visible = true;
+    this.deskTarget = this.deskBlend = 0;
     this.state = 'floating';
     this.searchTime = 0;
     this.scanIn = 0;
@@ -190,6 +202,7 @@ export class PlacementSystem extends createSystem({
     const root = this.root();
     const obj = root?.object3D;
     if (!root || !obj) return;
+    this.updateDesk(delta);
 
     if (this.state === 'arriving') {
       this.arriveIn -= delta;
@@ -279,6 +292,8 @@ export class PlacementSystem extends createSystem({
     this.liftHold = 0;
     if (this.liftRing) this.liftRing.visible = false;
     game.moving = true;
+    // Lifted into the air: the diorama box comes back.
+    this.deskTarget = 0;
     this.carryOffset.subVectors(obj.position, this.midpoint(this.mid));
     this.carrySpread = handSpread(hands.left, hands.right);
     whoosh();
@@ -332,6 +347,7 @@ export class PlacementSystem extends createSystem({
         obj.localToWorld(this.settleTo);
         this.toScale = Math.min(scale, fit.scale);
         this.settleSource = 'plane';
+        this.sinkToDesk();
       } catch (err) {
         console.warn('[placement] bad plane', err);
       }
@@ -339,7 +355,46 @@ export class PlacementSystem extends createSystem({
     return bestY > -Infinity;
   }
 
+  /**
+   * A real surface: the village ground will sit on it (the pedestal sinks),
+   * so lower the target by the pedestal's height.
+   */
+  private sinkToDesk(): void {
+    this.settleTo.y -= (LAYOUT.baseHeight - LAYOUT.deskLift) * this.toScale;
+  }
+
+  /** Eases between the diorama box and the living desk. */
+  private updateDesk(delta: number): void {
+    const step = delta / LAYOUT.deskBlendSeconds;
+    const before = this.deskBlend;
+    this.deskBlend =
+      this.deskTarget > this.deskBlend
+        ? Math.min(this.deskTarget, this.deskBlend + step)
+        : Math.max(this.deskTarget, this.deskBlend - step);
+    for (const e of this.queries.dioramas.entities) {
+      const d = e.object3D;
+      if (!d) continue;
+      const pedestal = d.getObjectByName('Pedestal');
+      const edge = d.getObjectByName('DeskEdge');
+      const b = this.deskBlend;
+      const ease = b * b * (3 - 2 * b);
+      if (pedestal) {
+        // The earth slab sinks down into the desk (the real desk hides it).
+        pedestal.scale.y = Math.max(0.001, 1 - ease);
+        pedestal.visible = b < 0.999;
+      }
+      if (edge) {
+        edge.visible = b > 0.3;
+        edge.scale.setScalar(0.85 + 0.15 * ease);
+      }
+      if (before !== this.deskBlend && (b === 0 || b === 1)) {
+        console.info(`[placement] ${b === 1 ? 'living desk: the village grows out of the desk' : 'diorama box'}`);
+      }
+    }
+  }
+
   private startSettle(obj: NonNullable<Entity['object3D']>): void {
+    this.deskTarget = this.settleSource === 'fallback' ? 0 : 1;
     this.state = 'settling';
     this.settleT = 0;
     this.settleFrom.copy(obj.position);
@@ -418,6 +473,7 @@ export class PlacementSystem extends createSystem({
         obj.localToWorld(this.settleTo);
         this.toScale = fit.scale;
         this.settleSource = 'plane';
+        this.sinkToDesk();
         if (fit.overhang) console.info('[placement] small table: the village overhangs a little');
       } catch (err) {
         console.warn('[placement] bad plane', err);
@@ -438,6 +494,7 @@ export class PlacementSystem extends createSystem({
     this.settleTo.copy(this.tmp);
     this.toScale = 1;
     this.settleSource = 'hit-test';
+    this.sinkToDesk();
     return true;
   }
 

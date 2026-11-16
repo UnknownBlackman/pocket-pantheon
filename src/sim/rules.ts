@@ -252,6 +252,13 @@ export const LAYOUT = {
   floatBob: 0.003,
   /** The look-down ray from the head used to find the table by hit test, degrees below forward. */
   lookDownDegrees: 35,
+  /**
+   * On a real desk the pedestal sinks away and the village ground sits this
+   * far above the desk (just clear of it, so depth occlusion never flickers).
+   */
+  deskLift: 0.0015,
+  /** Seconds the pedestal takes to sink into (or rise from) the desk. */
+  deskBlendSeconds: 1.2,
   /** Grid step when searching a table polygon for the best spot, metres. */
   fitGridStep: 0.02,
 } as const;

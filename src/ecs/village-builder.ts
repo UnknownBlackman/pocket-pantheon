@@ -2,10 +2,10 @@
  * Creates the visible village (diorama, buildings, villagers) as child
  * entities of the VillageRoot entity, mirroring the simulation World.
  */
-import { OneHandGrabbable } from '@iwsdk/core';
+import { Group, OneHandGrabbable } from '@iwsdk/core';
 import type { Entity, World } from '@iwsdk/core';
 import { makeFavorPips } from '../art/effects-art.ts';
-import { makeBuilding, makeDiorama, makeTablet, makeVillager } from '../art/village-art.ts';
+import { makeBlobShadow, makeBuilding, makeDiorama, makeTablet, makeVillager } from '../art/village-art.ts';
 import { LAYOUT } from '../sim/rules.ts';
 import type { World as SimWorld } from '../sim/types.ts';
 import { makeOccludable } from './occlusion.ts';
@@ -15,7 +15,19 @@ import { BuildingView, ChronicleTablet, DioramaView, FavorPips, VillagerView } f
 export const TABLET_POS = { x: 0.095, z: -0.2 } as const;
 
 export function buildVillage(world: World, root: Entity, sim: SimWorld): void {
-  const diorama = world.createTransformEntity(makeDiorama(), { parent: root });
+  const dioramaObj = makeDiorama();
+  // Soft shadows under the trees and props (on the grass, or the real desk).
+  const shadows = new Group();
+  shadows.name = 'GroundShadows';
+  shadows.position.y = LAYOUT.baseHeight;
+  for (const spot of (dioramaObj.userData.shadowSpots ?? []) as { x: number; z: number; d: number }[]) {
+    const blob = makeBlobShadow(spot.d);
+    blob.position.x = spot.x;
+    blob.position.z = spot.z;
+    shadows.add(blob);
+  }
+  dioramaObj.add(shadows);
+  const diorama = world.createTransformEntity(dioramaObj, { parent: root });
   diorama.addComponent(DioramaView);
   makeOccludable(diorama);
   const pips = world.createTransformEntity(makeFavorPips(), { parent: root });
