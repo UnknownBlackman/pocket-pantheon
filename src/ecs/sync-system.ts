@@ -82,11 +82,15 @@ export class SyncSystem extends createSystem({
           v.activity === 'wave' ||
           v.activity === 'ride' ||
           v.activity === 'daze' ||
+          v.activity === 'bow' ||
           (v.activity === 'cheer' && v.reaction === 'cheer') ||
           (p.headNear && v.activity === 'idle'));
       if (facesGod) {
         fx = p.head.x - obj.position.x;
         fz = p.head.z - obj.position.z;
+      } else if (v.activity === 'touch' && v.target) {
+        fx = v.target.x - v.pos.x;
+        fz = v.target.z - v.pos.z;
       } else if (v.activity === 'climb' && v.rideHand && p.hands[v.rideHand].present) {
         fx = p.hands[v.rideHand].x - obj.position.x;
         fz = p.hands[v.rideHand].z - obj.position.z;

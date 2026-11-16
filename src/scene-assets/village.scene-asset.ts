@@ -119,6 +119,7 @@ export function createHut(): Group {
   const root = new Group();
   root.name = 'Hut';
   root.add(k.mesh('Cottage'));
+  root.add(...hutUpgrades(W, D));
   root.add(panes.mesh('Windows', WINDOW_MAT));
 
   // Chimney smoke: three puffs that SyncSystem/AnimationSystem loop upwards.
@@ -340,7 +341,81 @@ export function createTablet(): Group {
   const root = new Group();
   root.name = 'Tablet';
   root.add(k.mesh('TabletStone'));
+  root.add(...tabletCarvings());
   return root;
+}
+
+/**
+ * Upgrades a hut earns as the village survives (sim/progress.ts hutTier),
+ * hidden until then: 'Apron' (tier 1) is a cobbled apron around the footing
+ * with stepping stones to the door; 'Garden' (tier 2) a wattle-fenced garden
+ * of cabbages and flowers beside it.
+ */
+function hutUpgrades(W: number, D: number): Mesh[] {
+  const rand = seeded(77);
+  const apron = new Kit();
+  const ring = 0.007;
+  for (let i = 0; i < 34; i++) {
+    // Walk the rectangle's perimeter just outside the footing.
+    const t = i / 34;
+    const per = 2 * (W + D);
+    let d = t * per;
+    let x: number;
+    let z: number;
+    if (d < W) {
+      x = -W / 2 + d;
+      z = D / 2 + ring;
+    } else if ((d -= W) < D) {
+      x = W / 2 + ring;
+      z = D / 2 - d;
+    } else if ((d -= D) < W) {
+      x = W / 2 - d;
+      z = -D / 2 - ring;
+    } else {
+      d -= W;
+      x = -W / 2 - ring;
+      z = -D / 2 + d;
+    }
+    apron.ico(0.0032 + rand() * 0.0012, vary(rand() < 0.3 ? HUE.stoneDark : HUE.stoneLight, rand, 0.08), {
+      x, y: 0.0006, z, sy: 0.4, ry: rand() * 3,
+    });
+  }
+  for (let i = 0; i < 3; i++) {
+    apron.cyl(0.0042, 0.0046, 0.0012, 7, vary(HUE.stone, rand, 0.08), {
+      x: (rand() - 0.5) * 0.004, z: D / 2 + 0.016 + i * 0.01, ry: rand() * 3,
+    });
+  }
+  const garden = new Kit();
+  const gx = W / 2 + 0.024;
+  const gw = 0.022;
+  const gd = 0.032;
+  garden.box(gw, 0.0012, gd, HUE.earth, { x: gx, y: 0.0006 });
+  // Wattle fence: posts and two woven rails.
+  for (const [ax, az, bx, bz] of [
+    [gx - gw / 2, -gd / 2, gx + gw / 2, -gd / 2],
+    [gx + gw / 2, -gd / 2, gx + gw / 2, gd / 2],
+    [gx - gw / 2, gd / 2, gx + gw / 2, gd / 2],
+  ]) {
+    for (const h of [0.004, 0.0075]) garden.bar(ax, h, az, bx, h, bz, 0.0012, HUE.wood);
+    garden.bar(ax, 0, az, ax, 0.009, az, 0.0016, HUE.woodDark);
+    garden.bar(bx, 0, bz, bx, 0.009, bz, 0.0016, HUE.woodDark);
+  }
+  const petals = [0xe8c14a, 0xc85a8a, 0x8a7ad0, 0xf2e6c8, 0xe07a4a];
+  for (let i = 0; i < 6; i++) {
+    const px = gx - gw / 2 + 0.005 + (i % 2) * 0.012;
+    const pz = -gd / 2 + 0.006 + Math.floor(i / 2) * 0.01;
+    if (i % 3 === 0) {
+      garden.ico(0.0034, vary(0x7fb04a, rand, 0.06), { x: px, y: 0.003, z: pz, sy: 0.75 }); // a cabbage
+    } else {
+      garden.cyl(0.0004, 0.0004, 0.006, 3, HUE.grassDark, { x: px, y: 0.001, z: pz });
+      garden.ico(0.0018, petals[i % petals.length], { x: px, y: 0.0075, z: pz });
+    }
+  }
+  const a = apron.mesh('Apron');
+  const g = garden.mesh('Garden');
+  a.visible = false;
+  g.visible = false;
+  return [a, g];
 }
 
 // ------------------------------------------------------------------ Grave
@@ -359,4 +434,51 @@ export function createGrave(): Group {
   root.name = 'Grave';
   root.add(k.mesh('Headstone'));
   return root;
+}
+
+/**
+ * Six golden carvings along the tablet's plinth, one per finished session
+ * (sim/progress.ts tabletCarvings): sun, sheaf, raindrop, hand, star, crown.
+ * Named 'Carving0'..'Carving5', hidden until earned.
+ */
+function tabletCarvings(): Mesh[] {
+  const out: Mesh[] = [];
+  const z = 0.0132;
+  const y = 0.0042;
+  const G = HUE.gold;
+  for (let i = 0; i < 6; i++) {
+    const k = new Kit();
+    const x = -0.025 + i * 0.01;
+    switch (i) {
+      case 0: // sun
+        k.cyl(0.0016, 0.0016, 0.0006, 8, G, { x, y, z, rx: Math.PI / 2 });
+        for (let r = 0; r < 4; r++) {
+          const a = (r / 4) * Math.PI * 2 + Math.PI / 4;
+          k.box(0.0006, 0.0014, 0.0005, G, { x: x + Math.cos(a) * 0.0027, y: y + Math.sin(a) * 0.0027, z, rz: a - Math.PI / 2 });
+        }
+        break;
+      case 1: // a sheaf of wheat
+        k.box(0.0006, 0.005, 0.0005, G, { x, y, z });
+        for (const s of [-1, 1]) k.box(0.0006, 0.0022, 0.0005, G, { x: x + s * 0.0011, y: y + 0.0012, z, rz: -s * 0.6 });
+        break;
+      case 2: // a raindrop
+        k.ico(0.0016, G, { x, y: y - 0.0006, z, sz: 0.35 });
+        k.cone(0.0013, 0.0022, 6, G, { x, y: y + 0.0004, z, sz: 0.35 });
+        break;
+      case 3: // an open hand
+        k.box(0.0026, 0.0022, 0.0005, G, { x, y: y - 0.0008, z });
+        for (let f = 0; f < 4; f++) k.box(0.0005, 0.0018, 0.0005, G, { x: x - 0.0009 + f * 0.0006, y: y + 0.0011, z });
+        break;
+      case 4: // a star
+        for (let r = 0; r < 3; r++) k.box(0.0006, 0.0042, 0.0005, G, { x, y, z, rz: (r / 3) * Math.PI });
+        break;
+      default: // a crown
+        k.box(0.0036, 0.0012, 0.0005, G, { x, y: y - 0.0012, z });
+        for (const s of [-1, 0, 1]) k.cone(0.0007, 0.0022, 4, G, { x: x + s * 0.0013, y: y - 0.0006, z, sz: 0.4 });
+    }
+    const m = k.mesh(`Carving${i}`);
+    m.visible = false;
+    out.push(m);
+  }
+  return out;
 }

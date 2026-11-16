@@ -19,7 +19,8 @@ import { clamp01, clampToDisc, dist, stepTowards } from './math.ts';
 import { hurt } from './life.ts';
 import { buildingAt } from './powers.ts';
 import { random, randomRange } from './random.ts';
-import { PRESENCE as P, RULES } from './rules.ts';
+import { PRESENCE as P, RITUAL, RULES } from './rules.ts';
+import { isChild } from './life.ts';
 import { guideAllows } from './tutorial.ts';
 import type { Activity, HandSide, Intent, Villager, World } from './types.ts';
 import { assignIntent } from './villager.ts';
@@ -101,7 +102,7 @@ export function makePresence(): GodPresence {
 
 /** Villagers already doing something the god's presence should not interrupt. */
 function busy(v: Villager): boolean {
-  return v.dead || v.carried || v.ride !== 'none' || v.hide !== 'none' || v.panic > 0;
+  return v.dead || v.carried || v.ride !== 'none' || v.hide !== 'none' || v.panic > 0 || v.rally > 0;
 }
 
 function react(v: Villager, activity: Activity, seconds: number): void {
@@ -331,6 +332,54 @@ function resting(h: HandSample): boolean {
   );
 }
 
+/** A spot just beyond one of the resting hand's fingertips. */
+function fingertipSpot(world: World, h: HandSample): { x: number; z: number } {
+  const f = Math.floor(random(world) * 5);
+  const tx = h.tips[f * 2];
+  const tz = h.tips[f * 2 + 1];
+  let dx = tx - h.x;
+  let dz = tz - h.z;
+  const len = Math.hypot(dx, dz) || 1;
+  dx /= len;
+  dz /= len;
+  const spot = { x: tx + dx * 0.012, z: tz + dz * 0.012 };
+  clampToDisc(spot, RULES.village.radius * 0.95);
+  return spot;
+}
+
+/**
+ * The return ritual: everyone drops what they are doing, runs to the edge of
+ * the village nearest the god (towards `toward`, village space) and cheers.
+ * Returns how many came.
+ */
+export function heroWelcome(world: World, toward: { x: number; z: number }, bus?: EventBus): number {
+  let dx = toward.x;
+  let dz = toward.z;
+  const len = Math.hypot(dx, dz);
+  if (len < 1e-3) {
+    dx = 0;
+    dz = 1;
+  } else {
+    dx /= len;
+    dz /= len;
+  }
+  const edge = RULES.village.radius * 0.72;
+  const gather = world.villagers.filter((v) => !busy(v));
+  gather.forEach((v, i) => {
+    const off = (i - (gather.length - 1) / 2) * 0.028;
+    v.target = {
+      x: dx * edge - dz * off + randomRange(world, -0.008, 0.008),
+      z: dz * edge + dx * off + randomRange(world, -0.008, 0.008),
+    };
+    clampToDisc(v.target, RULES.village.radius * 0.9);
+    v.rally = RITUAL.rallySeconds;
+    v.reaction = null;
+    v.reactionTime = 0;
+    v.activity = 'walk';
+  });
+  return gather.length;
+}
+
 function endHide(v: Villager): void {
   v.hide = 'none';
   v.hideTime = 0;
@@ -376,7 +425,29 @@ function updateHideAndSeek(world: World, p: GodPresence, dt: number, day: boolea
         endHide(v);
         continue;
       }
-      if (v.hide === 'going' && v.target) {
+      if (v.hide === 'touch-going' && v.target) {
+        // Run up to the god's fingertip...
+        const arrived = stepTowards(v.pos, v.target, RULES.village.walkSpeed * 1.5 * dt);
+        v.activity = 'walk';
+        if (arrived) {
+          v.hide = 'touching';
+          v.hideTime = 0;
+          v.activity = 'touch';
+          bus?.emit('villager.touched', { villagerId: v.id });
+        }
+      } else if (v.hide === 'touching') {
+        // ...reach up and touch it, then go and hide behind the hand.
+        v.activity = 'touch';
+        if (v.hideTime > RITUAL.touchSeconds) {
+          v.hide = 'going';
+          v.hideTime = 0;
+          v.target = {
+            x: p.hideX + randomRange(world, -0.02, 0.02),
+            z: p.hideZ + randomRange(world, -0.02, 0.02),
+          };
+          clampToDisc(v.target, RULES.village.radius * 0.95);
+        }
+      } else if (v.hide === 'going' && v.target) {
         const arrived = stepTowards(v.pos, v.target, RULES.village.walkSpeed * 1.4 * dt);
         v.activity = 'walk';
         if (arrived) {
@@ -389,22 +460,21 @@ function updateHideAndSeek(world: World, p: GodPresence, dt: number, day: boolea
         v.activity = 'hide';
       }
     }
-    // More of the curious join while the hand rests.
-    if (hiders < P.maxHiders && resting(h)) {
+    // More of the curious join while the hand rests; children come running.
+    // Each first touches a fingertip, then hides.
+    if (resting(h)) {
       scratch.x = p.hideX;
       scratch.z = p.hideZ;
       for (const v of world.villagers) {
-        if (hiders >= P.maxHiders) break;
+        const child = isChild(v);
+        if (hiders >= P.maxHiders + (child ? 2 : 0)) continue;
         if (busy(v) || v.reactionTime > 0) continue;
         if (dist(v.pos, scratch) > P.hideRadius) continue;
-        if (random(world) >= v.beliefs.initiative * P.hideRatePerInitiative * dt) continue;
-        v.hide = 'going';
+        const rate = child ? RITUAL.childJoinRate : v.beliefs.initiative * P.hideRatePerInitiative;
+        if (random(world) >= rate * dt) continue;
+        v.hide = 'touch-going';
         v.hideTime = 0;
-        v.target = {
-          x: p.hideX + randomRange(world, -0.02, 0.02),
-          z: p.hideZ + randomRange(world, -0.02, 0.02),
-        };
-        clampToDisc(v.target, RULES.village.radius * 0.95);
+        v.target = fingertipSpot(world, h);
         hiders++;
       }
     }

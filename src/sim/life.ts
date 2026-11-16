@@ -50,7 +50,15 @@ export function kill(world: World, v: Villager, cause: DeathCause, bus?: EventBu
   v.ride = 'none';
   v.rideHand = null;
   v.hide = 'none';
-  world.graves.push({ name: v.name, age: v.age, cause, day: world.dayIndex + 1 });
+  const nameOf = (id: string): string | undefined => world.villagers.find((o) => o.id === id)?.name;
+  world.graves.push({
+    name: v.name,
+    age: v.age,
+    cause,
+    day: world.dayIndex + 1,
+    parents: v.parents.map(nameOf).filter((n): n is string => !!n),
+    children: world.villagers.filter((o) => o.parents.includes(v.id)).map((o) => o.name),
+  });
   addChronicle(world, 'died', { name: v.name, age: v.age, cause: causeText(cause) }, [v.id], bus);
   if (cause !== 'old age') {
     // The village wonders why its god let this happen.
@@ -138,6 +146,7 @@ export function makeChild(world: World, a: Villager, b: Villager, make: MakeVill
 export interface YearReport {
   born: string[];
   died: string[];
+  cameOfAge: string[];
 }
 
 /**
@@ -145,11 +154,14 @@ export interface YearReport {
  * may die, and with plenty of food and room a child may be born.
  */
 export function endOfYear(world: World, make: MakeVillager, bus?: EventBus): YearReport {
-  const report: YearReport = { born: [], died: [] };
+  const report: YearReport = { born: [], died: [], cameOfAge: [] };
   for (const v of world.villagers) {
     if (v.dead) continue;
     v.age += 1;
-    if (v.age === LIFE.adultAge) addChronicle(world, 'came-of-age', { name: v.name }, [v.id], bus);
+    if (v.age === LIFE.adultAge) {
+      addChronicle(world, 'came-of-age', { name: v.name }, [v.id], bus);
+      report.cameOfAge.push(v.name);
+    }
   }
   for (const v of world.villagers) {
     if (v.dead || v.age < LIFE.oldAgeFrom) continue;

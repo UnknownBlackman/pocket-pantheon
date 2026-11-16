@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import { EventBus } from '../src/core/events.ts';
 import { dropVillager, liftVillager } from '../src/sim/powers.ts';
 import { random } from '../src/sim/random.ts';
-import { RULES } from '../src/sim/rules.ts';
+import { RITUAL, RULES } from '../src/sim/rules.ts';
 import type { Activity, World } from '../src/sim/types.ts';
 import { createWorld, duskScore, runFor, tick } from '../src/sim/world.ts';
 
@@ -166,8 +166,9 @@ describe('lift and drop', () => {
       dropVillager(w, v.id, b.pos.x + 0.01, b.pos.z);
       assert.equal(v.activity, activity, `drop on ${kind}`);
       assert.ok(Math.abs(v.beliefs.initiative - (before + RULES.beliefs.liftInitiative)) < 1e-9);
-      runFor(w, 1);
-      assert.equal(v.activity, activity, `still ${activity} after 1 s`);
+      assert.ok(v.reaction === 'bow' || v.reaction === 'cheer', 'a bow or cheer to the god first');
+      runFor(w, RITUAL.dropGreetSeconds + 1);
+      assert.equal(v.activity, activity, `${activity} after the greeting`);
     }
   });
 

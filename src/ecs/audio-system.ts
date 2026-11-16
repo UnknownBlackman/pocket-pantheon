@@ -17,6 +17,7 @@ export class AudioSystem extends createSystem({}) {
         tumble(e.hard);
         console.info(`[presence] ${e.villagerId} ${e.hard ? 'fell off' : 'hopped down from'} the hand`);
       }),
+      events.on('villager.touched', () => giggle()),
       events.on('villager.hid', (e) => {
         giggle();
         console.info(`[presence] ${e.villagerId} is hiding behind the hand`);

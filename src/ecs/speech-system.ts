@@ -129,6 +129,7 @@ export class SpeechSystem extends createSystem({
       on('god.waved', () => this.bark(this.nearestTo('wave'), 'wave', true)),
       on('god.cheered', () => this.bark(this.nearestTo('cheer'), 'cheer', true)),
       on('villager.lifted', (e) => this.bark(this.indexOf(e.villagerId), 'lifted', true)),
+      on('villager.touched', (e) => this.bark(this.indexOf(e.villagerId), 'touch')),
       on('villager.dropped', (e) => {
         const kind: BarkKind | null = !e.buildingId
           ? null

@@ -24,6 +24,7 @@ export interface GameEvents {
   'villager.climbed': { villagerId: string };
   'villager.fell': { villagerId: string; hard: boolean };
   'villager.hid': { villagerId: string };
+  'villager.touched': { villagerId: string };
   'hideseek.found': { count: number };
   'god.waved': Record<string, never>;
   'god.cheered': Record<string, never>;

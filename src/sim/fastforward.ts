@@ -21,6 +21,8 @@ export interface AwayReport {
   births: string[];
   festival: boolean;
   summary: string;
+  /** One line per happening, for the scroll on the chronicle tablet. */
+  lines: string[];
 }
 
 export function fastForward(world: World, hours: number): AwayReport {
@@ -28,6 +30,7 @@ export function fastForward(world: World, hours: number): AwayReport {
   let harvests = 0;
   const births: string[] = [];
   const deaths: string[] = [];
+  const grownUp: string[] = [];
   let festival = false;
   const fields = world.buildings.filter((b) => b.kind === 'field');
 
@@ -55,6 +58,7 @@ export function fastForward(world: World, hours: number): AwayReport {
     const year = endOfYear(world, makeVillager);
     births.push(...year.born);
     deaths.push(...year.died);
+    grownUp.push(...year.cameOfAge);
     if (!festival && averageBeliefs(world).faith > 0.7) festival = true;
     world.dayIndex += 1;
   }
@@ -73,11 +77,19 @@ export function fastForward(world: World, hours: number): AwayReport {
   world.effects.length = 0;
 
   const parts = [`${days} day${days === 1 ? '' : 's'} passed.`];
+  const lines: string[] = [];
+  if (harvests > 0) lines.push(`${harvests} golden harvest${harvests === 1 ? ' was' : 's were'} gathered in.`);
+  for (const n of births) lines.push(`${n} was born.`);
+  for (const n of grownUp) lines.push(`${n} came of age and took up work.`);
+  for (const n of deaths) lines.push(`${n} died of old age, and was laid to rest.`);
+  if (festival) lines.push('Faith ran high: they held a festival in your honour.');
+  if (world.title) lines.push(`They sang of ${world.title} around the fire.`);
+  if (!lines.length) lines.push('The village went quietly about its days.');
   if (harvests > 0) parts.push(`The fields gave ${harvests} harvest${harvests === 1 ? '' : 's'}.`);
   if (births.length) parts.push(`${births.join(' and ')} ${births.length === 1 ? 'was' : 'were'} born.`);
   if (deaths.length) parts.push(`${deaths.join(' and ')} died of old age.`);
   if (festival) parts.push('Faith ran high and they held a festival.');
   const summary = parts.join(' ');
   addChronicle(world, 'away', { summary });
-  return { days, harvests, births, festival, summary };
+  return { days, harvests, births, festival, summary, lines };
 }

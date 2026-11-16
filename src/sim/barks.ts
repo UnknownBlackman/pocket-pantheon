@@ -14,6 +14,8 @@ export type BarkKind =
   | 'fall'
   | 'hop-down'
   | 'hide'
+  | 'touch'
+  | 'welcome'
   | 'found'
   | 'wave'
   | 'cheer'
@@ -47,6 +49,8 @@ const LINES: Record<BarkKind, readonly string[]> = {
   fall: ['Ow!', 'Aaah!', 'My leg!'],
   'hop-down': ['Down I go.', 'Thank you!'],
   hide: ['Hide!', 'Shh, behind the hand!', 'It won\'t find us here.'],
+  touch: ['So big!', 'It\'s warm!', 'A giant finger!', 'Hello, great one!'],
+  welcome: ['Our god has returned!', 'You came back!', 'Welcome home, great one!'],
   found: ['You found us!', 'Again! Again!', 'Ha! Caught!'],
   wave: ['Look, the god waves!', 'Hello up there!', 'Wave back, everyone!'],
   cheer: ['Hooray!', 'Glory!', 'Huzzah!'],
@@ -79,6 +83,8 @@ const MOODS: Partial<Record<BarkKind, BarkMood>> = {
   ride: 'joy',
   climb: 'joy',
   found: 'joy',
+  touch: 'joy',
+  welcome: 'joy',
   wave: 'joy',
   cheer: 'joy',
   blessed: 'joy',

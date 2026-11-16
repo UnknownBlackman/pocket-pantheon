@@ -16,6 +16,7 @@ import { HandFxSystem } from './ecs/hand-fx-system.js';
 import { HandGestureSystem } from './ecs/hand-gesture-system.js';
 import { HandPresenceSystem } from './ecs/hand-presence-system.js';
 import { PowerSystem } from './ecs/power-system.js';
+import { ProgressSystem } from './ecs/progress-system.js';
 import { SaveSystem } from './ecs/save-system.js';
 import { VillageRoot } from './ecs/components.js';
 import { FRESH_FLAG, game } from './ecs/game.js';
@@ -76,6 +77,7 @@ World.create(
     .registerSystem(SpeechSystem, { priority: P.ui })
     .registerSystem(StatsSystem, { priority: P.ui })
     .registerSystem(LifeSystem, { priority: P.effects })
+    .registerSystem(ProgressSystem, { priority: P.effects })
     .registerSystem(PanelSystem, { priority: P.ui })
     .registerSystem(SaveSystem, { priority: P.save })
     .registerSystem(PreviewCameraSystem, { priority: P.ui });

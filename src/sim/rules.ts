@@ -438,3 +438,31 @@ export const CARRY = {
   /** Only set it down on a table no more than this far below (metres). */
   dropReach: 0.6,
 } as const;
+
+/** The village changes as it survives (sim/progress.ts). */
+export const PROGRESS = {
+  /** Traffic grid cell size (metres). */
+  cellSize: 0.02,
+  /** Seconds of walking in a cell before a stepping stone appears there... */
+  stoneAfter: 20,
+  /** ...and when it is fully worn in. */
+  stoneFull: 60,
+  /** Traffic stops counting here (keeps saves small and stable). */
+  trafficCap: 200,
+  maxCarvings: 6,
+} as const;
+
+/** Little rituals with the god (sim/presence.ts, sim/powers.ts). */
+export const RITUAL = {
+  /** Curious villagers touch the resting hand's fingertip this long before hiding. */
+  touchSeconds: 2.2,
+  /** Children run to a resting hand at this rate per second (whatever their Initiative). */
+  childJoinRate: 1.6,
+  /** A villager set down on a job bows or cheers this long first. */
+  dropGreetSeconds: 1.3,
+  /** The return ritual: running to the edge (gives up after this long)... */
+  rallySeconds: 9,
+  rallySpeed: 1.6,
+  /** ...then cheering there. */
+  rallyCheerSeconds: 3.5,
+} as const;

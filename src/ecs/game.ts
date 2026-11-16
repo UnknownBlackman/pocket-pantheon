@@ -27,6 +27,8 @@ export interface GameState {
   returning: boolean;
   /** "While you were away" report, shown once when the village is placed. */
   away: AwayReport | null;
+  /** Lines of the "while you were away" scroll, shown on the chronicle tablet once. */
+  awayScroll: string[] | null;
   /** Start a fresh 3-day session when the village is next placed. */
   newSessionOnPlace: boolean;
   /** The player's hands and head in village space (filled by HandPresenceSystem). */
@@ -65,6 +67,7 @@ function initialState(): GameState {
       placementSource: 'none',
       returning: true,
       away: loaded.away,
+      awayScroll: null,
       // A finished session, or a long absence, starts a new 3-day session.
       newSessionOnPlace: w.phase !== 'day' || loaded.away !== null,
       presence: makePresence(),
@@ -79,6 +82,7 @@ function initialState(): GameState {
     placementSource: 'none',
     returning: false,
     away: null,
+    awayScroll: null,
     newSessionOnPlace: false,
     presence: makePresence(),
   };

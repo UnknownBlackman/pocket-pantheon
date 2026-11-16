@@ -6,6 +6,8 @@
  *   ends, a "Begin a new day" button (poke) starts the next session.
  * - Poking the stone tablet beside the shrine opens the chronicle of past
  *   sessions; poking it again (or waiting) closes it.
+ * - A returning god finds a "While you were away" scroll open above the
+ *   tablet, listing what happened (sim/fastforward.ts).
  */
 import { createSystem, Vector3, VisibilityState } from '@iwsdk/core';
 import type { Entity } from '@iwsdk/core';
@@ -32,6 +34,7 @@ const DUSK_LOCAL = new Vector3(0, LAYOUT.baseHeight + 0.26, -0.18);
 const CHRONICLE_ABOVE = 0.2;
 const TABLET_POKE_RADIUS = 0.04;
 const CHRONICLE_OPEN_SECONDS = 30;
+const AWAY_SCROLL_SECONDS = 40;
 
 export class ChronicleSystem extends createSystem({
   roots: { required: [VillageRoot] },
@@ -48,6 +51,8 @@ export class ChronicleSystem extends createSystem({
   private chronicleOpen = 0;
   private tabletTouch = 0;
   private tabletLatched = false;
+  /** The away scroll, while it is the open page. */
+  private awayLines: string[] | null = null;
 
   init(): void {
     this.dusk = this.makePanel(720, 640, 0.34, 'DuskPanel');
@@ -166,20 +171,33 @@ export class ChronicleSystem extends createSystem({
     if (touching && !this.tabletLatched && this.tabletTouch > 0.3) {
       this.tabletLatched = true;
       this.chronicleOpen = this.chronicleOpen > 0 ? 0 : CHRONICLE_OPEN_SECONDS;
+      if (this.chronicleOpen <= 0) this.awayLines = null; // read: back to the chronicle
       chime();
+    }
+    // A returning god finds the "while you were away" scroll open on the tablet.
+    if (game.awayScroll) {
+      this.awayLines = game.awayScroll;
+      game.awayScroll = null;
+      this.chronicleOpen = AWAY_SCROLL_SECONDS;
+      this.chronicleKey = '';
     }
 
     if (this.chronicleOpen <= 0) {
       mesh.visible = false;
+      this.awayLines = null;
       return;
     }
     this.chronicleOpen -= delta;
     const sim = game.sim;
-    const key = `${sim.chronicle.length}`;
+    const key = this.awayLines ? 'away' : `${sim.chronicle.length}`;
     if (key !== this.chronicleKey || !mesh.visible) {
       this.chronicleKey = key;
-      const entries = sim.chronicle.slice(-10).reverse().map((e) => e.text);
-      drawChronicle(this.chronicle, entries);
+      if (this.awayLines) {
+        drawChronicle(this.chronicle, this.awayLines, 'While you were away', true);
+      } else {
+        const entries = sim.chronicle.slice(-10).reverse().map((e) => e.text);
+        drawChronicle(this.chronicle, entries);
+      }
     }
     mesh.position.set(this.v.x, this.v.y + CHRONICLE_ABOVE, this.v.z);
     mesh.lookAt(this.head);

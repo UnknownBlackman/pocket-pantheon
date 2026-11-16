@@ -230,6 +230,27 @@ export function poseFor(
       p.headX = -0.3;
       break;
     }
+    case 'bow':
+      // A little bow to the god, hands together.
+      p.rx = 0.55 * Math.sin(Math.min(1, at / 1.3) * Math.PI);
+      p.headX = 0.3;
+      p.armLx = p.armRx = -0.5;
+      p.armLz = -0.3;
+      p.armRz = 0.3;
+      p.eyes = 0.15;
+      break;
+    case 'touch': {
+      // On tiptoe, reaching up to pat the god's fingertip.
+      const pat = Math.sin(t * 9);
+      p.y = 0.0012 + Math.max(0, pat) * 0.0012;
+      p.rx = -0.15;
+      p.armLx = -2.2 + pat * 0.15;
+      p.armRx = -2.2 - pat * 0.15;
+      p.armLz = -0.15;
+      p.armRz = 0.15;
+      p.headX = -0.45;
+      break;
+    }
     case 'awe':
       // Staring up at the god's hand, arms a little out in wonder.
       p.headX = -0.6 * ease;

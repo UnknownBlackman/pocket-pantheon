@@ -239,21 +239,68 @@ export function drawDusk(
 }
 
 /** Chronicle card for the stone tablet: newest entries first. */
-export function drawChronicle(panel: CanvasPanel, entries: string[]): void {
+export function drawChronicle(
+  panel: CanvasPanel,
+  entries: string[],
+  title = 'The Chronicle',
+  bullets = false,
+): void {
   const ctx = panel.begin();
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = UI_COLORS.title;
   ctx.font = `700 44px ${UI_FONT}`;
-  ctx.fillText('The Chronicle', 36, 70);
+  ctx.fillText(title, 36, 70);
   ctx.fillStyle = UI_COLORS.text;
   ctx.font = `600 25px ${UI_BODY}`;
   let y = 116;
   for (const e of entries) {
     if (y > panel.heightPx - 40) break;
-    y = wrapText(ctx, e, 36, y, panel.widthPx - 72, 32, 3) + 6;
+    if (bullets) {
+      // A small gold diamond before each happening.
+      ctx.save();
+      ctx.fillStyle = UI_COLORS.title;
+      ctx.translate(44, y - 9);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-5, -5, 10, 10);
+      ctx.restore();
+      y = wrapText(ctx, e, 64, y, panel.widthPx - 100, 32, 3) + 10;
+    } else {
+      y = wrapText(ctx, e, 36, y, panel.widthPx - 72, 32, 3) + 6;
+    }
   }
   ctx.fillStyle = UI_COLORS.dim;
   ctx.font = `600 21px ${UI_BODY}`;
   ctx.fillText('Poke the tablet again to close.', 36, panel.heightPx - 26);
   panel.commit();
+}
+
+/** A remembered villager: who lies in this grave, and their family. */
+export function drawGraveCard(
+  panel: CanvasPanel,
+  g: { name: string; age: number; cause: string; day: number; parents: string[]; children: string[] },
+): void {
+  const ctx = panel.begin();
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = UI_COLORS.dim;
+  ctx.font = `600 22px ${UI_BODY}`;
+  ctx.fillText('Here lies', 32, 46);
+  ctx.fillStyle = UI_COLORS.title;
+  ctx.font = `700 46px ${UI_FONT}`;
+  ctx.fillText(g.name, 32, 96);
+  ctx.fillStyle = UI_COLORS.text;
+  ctx.font = `600 24px ${UI_BODY}`;
+  let y = 140;
+  y = wrapText(ctx, `${g.age} years old. ${g.cause[0].toUpperCase()}${g.cause.slice(1)}, on day ${g.day}.`, 32, y, panel.widthPx - 64, 30, 2) + 6;
+  if (g.parents.length) y = wrapText(ctx, `Child of ${listNames(g.parents)}.`, 32, y, panel.widthPx - 64, 30, 2) + 6;
+  if (g.children.length) y = wrapText(ctx, `Parent of ${listNames(g.children)}.`, 32, y, panel.widthPx - 64, 30, 2) + 6;
+  if (!g.parents.length && !g.children.length) wrapText(ctx, 'One of the first of the village.', 32, y, panel.widthPx - 64, 30, 2);
+  ctx.fillStyle = UI_COLORS.dim;
+  ctx.font = `600 19px ${UI_BODY}`;
+  ctx.fillText('Remembered by the village.', 32, panel.heightPx - 22);
+  panel.commit();
+}
+
+function listNames(names: string[]): string {
+  if (names.length <= 1) return names.join('');
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }

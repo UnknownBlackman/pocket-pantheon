@@ -50,6 +50,7 @@ import { hands } from '../xr/hand-state.ts';
 import { carryReleased, handSpread, liftPose } from '../xr/village-carry.ts';
 import { guideNudge } from './guide-nudge.ts';
 import { DioramaView, VillageRoot } from './components.ts';
+import { returnRitual } from './return-ritual.ts';
 import { game } from './game.ts';
 
 type State = 'idle' | 'arriving' | 'floating' | 'settling' | 'settled' | 'carried';
@@ -69,6 +70,8 @@ export class PlacementSystem extends createSystem({
   /** 0 = diorama box, 1 = living desk; eases towards deskTarget. */
   private deskBlend = 0;
   private deskTarget = 0;
+  /** A returning god gets a hero's welcome once the village has settled. */
+  private ritualPending = false;
   private state: State = 'idle';
   private searchTime = 0;
   private arriveIn = 0;
@@ -178,8 +181,11 @@ export class PlacementSystem extends createSystem({
       game.newSessionOnPlace = false;
       startSession(game.sim, events);
     }
+    this.ritualPending = !!game.away || game.returning;
     if (game.away) {
-      showToast('While you were away', game.away.summary, 9);
+      // The full story waits on the chronicle tablet's scroll.
+      showToast('While you were away', `${game.away.days} days passed. Read all about it on the stone tablet.`, 7);
+      game.awayScroll = game.away.lines;
       game.away = null;
     } else if (game.returning) {
       const title = game.sim.title ? `, ${game.sim.title}` : '';
@@ -410,6 +416,10 @@ export class PlacementSystem extends createSystem({
     this.tryAnchor(root);
     game.placementSource = source;
     if (source !== 'fallback') chime();
+    if (this.ritualPending) {
+      this.ritualPending = false;
+      returnRitual();
+    }
     console.info(`[placement] village placed using ${source}`);
     events.emit('village.placed', { source });
   }

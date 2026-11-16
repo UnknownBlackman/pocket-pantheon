@@ -2,6 +2,7 @@
  * World state: resources, weather, buildings, time of day, the session loop.
  * Pure simulation code; the ECS SimSystem calls tick() at a fixed rate.
  */
+import { addTraffic } from './progress.ts';
 import type { EventBus } from '../core/events.ts';
 import { addChronicle } from './chronicle.ts';
 import { clamp01 } from './math.ts';
@@ -85,7 +86,19 @@ export function makeVillager(world: World, index: number): Villager {
 /** Defaults for the presence-driven villager fields (also used by save migration). */
 export function freshPresenceFields(): Pick<
   Villager,
-  'reaction' | 'reactionTime' | 'ride' | 'rideHand' | 'rideX' | 'rideZ' | 'rideTime' | 'rideY' | 'rideLifted' | 'rideHard' | 'hide' | 'hideTime'
+  | 'reaction'
+  | 'reactionTime'
+  | 'ride'
+  | 'rideHand'
+  | 'rideX'
+  | 'rideZ'
+  | 'rideTime'
+  | 'rideY'
+  | 'rideLifted'
+  | 'rideHard'
+  | 'hide'
+  | 'hideTime'
+  | 'rally'
 > {
   return {
     reaction: null,
@@ -100,6 +113,7 @@ export function freshPresenceFields(): Pick<
     rideHard: false,
     hide: 'none',
     hideTime: 0,
+    rally: 0,
   };
 }
 
@@ -135,6 +149,7 @@ export function createWorld(seed = 1): World {
     graves: [],
     stormClouds: [],
     stormRegrow: [],
+    traffic: [],
     // The guided tutorial is started by the game on a first visit (sim/tutorial.ts).
     guide: { step: 'none', active: false },
     eclipse: false,
@@ -347,7 +362,10 @@ export function tick(world: World, dt: number, bus?: EventBus): void {
   updateStorm(world, dt);
   guideTopUp(world);
   updateBuildings(world, dt, bus);
-  for (const v of world.villagers) updateVillager(world, v, dt, bus);
+  for (const v of world.villagers) {
+    updateVillager(world, v, dt, bus);
+    if (v.activity === 'walk' && !v.carried) addTraffic(world, v.pos.x, v.pos.z, dt);
+  }
   updateLife(world, dt, bus);
   world.favor = Math.min(R.favor.max, Math.max(0, world.favor));
   world.food = Math.min(100, Math.max(0, world.food));

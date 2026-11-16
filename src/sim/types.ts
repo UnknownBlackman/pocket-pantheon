@@ -22,13 +22,16 @@ export type Activity =
   | 'ride' // sitting on the god's palm
   | 'fall' // tumbling off the palm
   | 'hide' // hiding behind the god's resting hand
+  | 'touch' // reaching up to touch the god's fingertip
+  | 'bow' // a little bow to the god after being set down on a job
   // Life and death (sim/life.ts):
   | 'play' // children at play
   | 'mourn' // standing in grief for someone who died
   | 'dead';
 
 export type RideState = 'none' | 'climb' | 'ride' | 'fall';
-export type HideState = 'none' | 'going' | 'hiding';
+/** Hide-and-seek: first run to touch a fingertip, then go and hide behind the hand. */
+export type HideState = 'none' | 'touch-going' | 'touching' | 'going' | 'hiding';
 export type HandSide = 'left' | 'right';
 
 /** What the villager is trying to do; `activity` is what they are doing right now. */
@@ -85,6 +88,8 @@ export interface Villager {
   /** Hide-and-seek behind the god's resting hand. */
   hide: HideState;
   hideTime: number;
+  /** Seconds left of running to greet the returning god (0 = not rallying). */
+  rally: number;
 
   /** Age in years (one game day is one year); children are under LIFE.adultAge. */
   age: number;
@@ -105,6 +110,9 @@ export interface Grave {
   age: number;
   cause: DeathCause;
   day: number;
+  /** Names of their parents and children (lineage, for the graveyard). */
+  parents?: string[];
+  children?: string[];
 }
 
 /** What the god did this session, for the divine title at dusk. */
@@ -182,6 +190,8 @@ export interface World {
   totals: { harvests: number; prayers: number; storms: number };
   /** The dead, in order, for the graveyard and the chronicle. */
   graves: Grave[];
+  /** Seconds walked per grid cell (sim/progress.ts): busy cells wear into paths. */
+  traffic: number[];
   /** Storm clouds over the village: 1 present, 0 swatted away (sim/storm.ts). */
   stormClouds: number[];
   /** Seconds until each swatted cloud regrows. */

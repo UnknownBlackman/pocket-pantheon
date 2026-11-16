@@ -5,7 +5,7 @@ import type { EventBus } from '../core/events.ts';
 import { addChronicle } from './chronicle.ts';
 import { clamp, clamp01, clampToDisc, dist, stepTowards } from './math.ts';
 import { random, randomRange } from './random.ts';
-import { LIFE, RULES } from './rules.ts';
+import { LIFE, RITUAL, RULES } from './rules.ts';
 import { stormStrength } from './storm.ts';
 import type { Building, BuildingKind, Intent, Villager, World } from './types.ts';
 
@@ -331,6 +331,24 @@ export function updateVillager(world: World, v: Villager, dt: number, bus?: Even
   // Riding the god's palm or hiding behind the god's hand: sim/presence.ts
   // moves them; only their needs advance here.
   if (v.ride !== 'none' || v.hide !== 'none') {
+    updateMood(v);
+    return;
+  }
+
+  // The return ritual (sim/presence.ts heroWelcome): run to the edge, then cheer.
+  if (v.rally > 0) {
+    v.rally -= dt;
+    const arrived = v.target
+      ? stepTowards(v.pos, v.target, R.village.walkSpeed * RITUAL.rallySpeed * dt)
+      : true;
+    v.activity = 'walk';
+    if (arrived || v.rally <= 0) {
+      v.rally = 0;
+      v.target = null;
+      v.reaction = 'cheer';
+      v.reactionTime = RITUAL.rallyCheerSeconds;
+      v.activity = 'cheer';
+    }
     updateMood(v);
     return;
   }

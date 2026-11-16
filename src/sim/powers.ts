@@ -5,7 +5,8 @@
 import type { EventBus } from '../core/events.ts';
 import { addChronicle } from './chronicle.ts';
 import { clamp01, clampToDisc, dist } from './math.ts';
-import { RULES } from './rules.ts';
+import { random } from './random.ts';
+import { RITUAL, RULES } from './rules.ts';
 import type { Building, Villager, World } from './types.ts';
 import { assignIntent, buildingById } from './villager.ts';
 import { freshPresenceFields } from './world.ts';
@@ -91,6 +92,9 @@ export function dropVillager(
     v.target = null;
     v.activity = intent === 'farm' ? 'farm' : intent === 'rest' ? 'rest' : intent === 'pray' ? 'pray' : 'idle';
     v.decisionIn = 1 / R.sim.decisionHz;
+    // A quick bow (or a cheer) to the god before getting to work.
+    v.reaction = random(world) < 0.5 ? 'bow' : 'cheer';
+    v.reactionTime = RITUAL.dropGreetSeconds;
     v.beliefs.initiative = clamp01(v.beliefs.initiative + R.beliefs.liftInitiative);
     markIntervention(world);
     world.sessionCounts.lift += 1;

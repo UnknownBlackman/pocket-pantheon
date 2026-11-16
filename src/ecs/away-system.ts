@@ -2,18 +2,16 @@
  * The village waits for its god: when the player walks more than AWAY.distance
  * from the village for AWAY.seconds, the day clock holds (SimSystem) and the
  * music softens. Coming back within AWAY.returnDistance resumes it with a
- * greeting from the nearest villager.
+ * hero's welcome (ecs/return-ritual.ts).
  */
 import { createSystem, Vector3, VisibilityState } from '@iwsdk/core';
 import type { Entity } from '@iwsdk/core';
 import { chime } from '../audio/sfx.ts';
 import { AWAY } from '../sim/rules.ts';
-import { say } from '../ui/speech.ts';
 import { showToast } from '../ui/ui-state.ts';
 import { VillageRoot } from './components.ts';
 import { game } from './game.ts';
-
-const RETURN_LINES = ['The god returns!', 'You came back!', 'We waited for you.'];
+import { returnRitual } from './return-ritual.ts';
 
 export class AwaySystem extends createSystem({
   roots: { required: [VillageRoot] },
@@ -53,25 +51,7 @@ export class AwaySystem extends createSystem({
       console.info('[away] the god is back');
       chime();
       showToast('Welcome back', 'The village waited for you.', 4);
-      this.greet();
+      returnRitual();
     }
-  }
-
-  /** The nearest living villager to the player calls out. */
-  private greet(): void {
-    const local = this.root()?.object3D?.worldToLocal(this.head.clone());
-    if (!local) return;
-    let best = -1;
-    let bestD = Infinity;
-    game.sim.villagers.forEach((v, i) => {
-      if (v.dead) return;
-      const dd = Math.hypot(v.pos.x - local.x, v.pos.z - local.z);
-      if (dd < bestD) {
-        bestD = dd;
-        best = i;
-      }
-    });
-    const line = RETURN_LINES[Math.floor(Math.random() * RETURN_LINES.length)];
-    if (best >= 0) say(best, line, 3, false, 'joy');
   }
 }
