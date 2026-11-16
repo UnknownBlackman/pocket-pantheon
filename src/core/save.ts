@@ -5,6 +5,7 @@
  * in so the logic can be tested in Node.
  */
 import { sexOfName } from '../sim/names.ts';
+import { GUIDE, LESSON_IDS } from '../sim/tutorial.ts';
 import { fastForward } from '../sim/fastforward.ts';
 import { freshPresenceFields, freshSessionCounts } from '../sim/world.ts';
 import type { AwayReport } from '../sim/fastforward.ts';
@@ -44,6 +45,14 @@ export function deserializeWorld(json: string): World | null {
     w.traffic ??= [];
     // Saves from before the guided tutorial: those players already know the game.
     w.guide ??= { step: 'done', active: false };
+    // Saves from before lessons: players who finished or skipped the old
+    // tutorial have learned everything already.
+    w.lessons ??= { active: null, done: [...LESSON_IDS], time: 0, free: 0 };
+    // A save stopped at a tutorial step that no longer exists moves on to the lessons.
+    if (w.guide.active && !GUIDE.some((s) => s.id === w.guide!.step)) {
+      w.guide = { step: 'done', active: false };
+      w.lessons = { active: null, done: [], time: 0, free: 0 };
+    }
     w.deathsToday ??= 0;
     for (const v of w.villagers) {
       v.age ??= 30;

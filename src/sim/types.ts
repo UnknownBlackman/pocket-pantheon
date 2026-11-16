@@ -40,6 +40,9 @@ export type Intent = 'idle' | 'farm' | 'rest' | 'pray' | 'gather' | 'play';
 
 export type ChronicleRef = { entryIndex: number };
 
+/** Just-in-time tutorial lessons (sim/tutorial.ts). */
+export type LessonId = 'rain' | 'shelter' | 'calm' | 'wave' | 'pause';
+
 /** 'f' for women and girls, 'm' for men and boys (looks, names, parents). */
 export type Sex = 'f' | 'm';
 
@@ -201,6 +204,8 @@ export interface World {
   stormRegrow: number[];
   /** First-visit guided tutorial (sim/tutorial.ts). */
   guide: { step: string; active: boolean };
+  /** Lessons after the core guide: the one being taught, those done, and timers. */
+  lessons: { active: LessonId | null; done: LessonId[]; time: number; free: number };
   /** True while the god's hand darkens three or more villagers (they kneel). */
   eclipse: boolean;
   /** This session's interventions, reset each session. */

@@ -12,7 +12,7 @@ import type { Building, BuildingKind, Villager, Weather, World } from './types.t
 import { endOfYear, updateLife } from './life.ts';
 import { initStorm, updateStorm } from './storm.ts';
 import { divineTitle } from './title.ts';
-import { guideTopUp } from './tutorial.ts';
+import { guideTopUp, updateLessons } from './tutorial.ts';
 import { updateVillager } from './villager.ts';
 
 const R = RULES;
@@ -153,6 +153,7 @@ export function createWorld(seed = 1): World {
     traffic: [],
     // The guided tutorial is started by the game on a first visit (sim/tutorial.ts).
     guide: { step: 'none', active: false },
+    lessons: { active: null, done: [], time: 0, free: 0 },
     eclipse: false,
     sessionCounts: freshSessionCounts(),
     title: '',
@@ -363,6 +364,7 @@ export function tick(world: World, dt: number, bus?: EventBus): void {
   updateEffects(world, dt);
   updateStorm(world, dt);
   guideTopUp(world);
+  updateLessons(world, dt, bus);
   updateBuildings(world, dt, bus);
   for (const v of world.villagers) {
     updateVillager(world, v, dt, bus);

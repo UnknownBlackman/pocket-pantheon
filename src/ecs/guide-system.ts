@@ -1,9 +1,10 @@
 /**
- * Runs the first-visit guided tutorial (sim/tutorial.ts) in the world:
- * feeds the player's actions to the guide, has Elder Ama say each step's
- * line (repeated every 12 s until done), and places a pulsing gold marker
- * with a bobbing arrow on what to do next. The hint panel shows the step's
- * instructions and a Skip button (UISystem).
+ * Runs the first-visit tutorial (sim/tutorial.ts) in the world: the short
+ * core guide, then lessons taught just in time. Feeds the player's actions
+ * to both, has Elder Ama say the current line (repeated every 12 s until
+ * done), and places a pulsing gold marker with a bobbing arrow on what to
+ * do next. The hint panel shows the instructions (UISystem); core steps
+ * also offer a Skip button.
  */
 import { createSystem } from '@iwsdk/core';
 import type { Entity, Group } from '@iwsdk/core';
@@ -11,7 +12,7 @@ import { makeGuideMarker } from '../art/guide-art.ts';
 import { chime } from '../audio/sfx.ts';
 import { events } from '../core/events.ts';
 import { LAYOUT, RULES } from '../sim/rules.ts';
-import { guideElder, guideEvent, guideField, guideStep } from '../sim/tutorial.ts';
+import { activeLesson, driestField, guideElder, guideEvent, guideField, guideStep, lessonEvent } from '../sim/tutorial.ts';
 import type { GuideEvent } from '../sim/tutorial.ts';
 import { say } from '../ui/speech.ts';
 import { showToast } from '../ui/ui-state.ts';
@@ -28,8 +29,7 @@ export class GuideSystem extends createSystem({
 
   init(): void {
     const feed = (e: GuideEvent) => {
-      if (!game.sim.guide.active) return;
-      if (guideEvent(game.sim, e, events)) chime();
+      if (guideEvent(game.sim, e, events) || lessonEvent(game.sim, e, events)) chime();
     };
     this.cleanupFuncs.push(
       events.on('villager.inspected', () => feed({ kind: 'inspected' })),
@@ -37,15 +37,21 @@ export class GuideSystem extends createSystem({
       events.on('power.used', (e) => feed({ kind: 'power', power: e.kind })),
       events.on('villager.climbed', () => feed({ kind: 'climbed' })),
       events.on('storm.calmed', () => feed({ kind: 'calmed' })),
+      events.on('storm.swatted', () => feed({ kind: 'calmed' })),
       events.on('god.waved', () => feed({ kind: 'waved' })),
       events.on('session.paused', (e) => {
         if (e.paused) feed({ kind: 'paused' });
       }),
       events.on('guide.step', (e) => {
         console.info(`[guide] step: ${e.step}`);
+        if (e.step.endsWith('-done')) return; // a lesson learned (or faded)
         this.sayIn = 0.5; // the elder speaks shortly after a new step
         if (e.step === 'done') {
-          showToast('You are ready, great one', 'The first day begins. Guide them well, but not too much.', 8);
+          showToast(
+            'The village is yours',
+            'The first day begins. Ama will call on you when they need you. Guide them well, but not too much.',
+            8,
+          );
         }
       }),
     );
@@ -57,7 +63,7 @@ export class GuideSystem extends createSystem({
   }
 
   update(delta: number, time: number): void {
-    const step = game.stage === 'playing' ? guideStep(game.sim) : null;
+    const step = game.stage === 'playing' ? (guideStep(game.sim) ?? activeLesson(game.sim)) : null;
     const root = this.root();
     if (!step || !root) {
       if (this.marker) this.marker.visible = false;
@@ -91,7 +97,7 @@ export class GuideSystem extends createSystem({
         break;
       case 'field':
       case 'dry-field': {
-        const f = guideField(sim);
+        const f = step.target === 'dry-field' ? driestField(sim) : guideField(sim);
         if (f) {
           x = f.pos.x;
           z = f.pos.z;

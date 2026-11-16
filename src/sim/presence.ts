@@ -332,6 +332,17 @@ function resting(h: HandSample): boolean {
   );
 }
 
+/** First sight of the god: everyone stops, looks up and waves. Returns how many. */
+export function greetGod(world: World): number {
+  let n = 0;
+  for (const v of world.villagers) {
+    if (busy(v)) continue;
+    react(v, 'wave', RITUAL.greetSeconds);
+    n++;
+  }
+  return n;
+}
+
 /** A spot just beyond one of the resting hand's fingertips. */
 function fingertipSpot(world: World, h: HandSample): { x: number; z: number } {
   const f = Math.floor(random(world) * 5);

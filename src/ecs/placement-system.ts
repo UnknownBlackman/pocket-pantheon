@@ -39,7 +39,9 @@ import { makeProgressRing, setRingProgress } from '../art/effects-art.ts';
 import type { ProgressRing } from '../art/effects-art.ts';
 import { chime, whoosh } from '../audio/sfx.ts';
 import { events } from '../core/events.ts';
-import { CARRY, LAYOUT, RULES } from '../sim/rules.ts';
+import { CARRY, LAYOUT, RITUAL, RULES } from '../sim/rules.ts';
+import { greetGod } from '../sim/presence.ts';
+import { say } from '../ui/speech.ts';
 import { aliveCount } from '../sim/life.ts';
 import { guideAllows, startGuide } from '../sim/tutorial.ts';
 import { startSession } from '../sim/world.ts';
@@ -72,6 +74,9 @@ export class PlacementSystem extends createSystem({
   private deskTarget = 0;
   /** A returning god gets a hero's welcome once the village has settled. */
   private ritualPending = false;
+  /** A brand-new god: the villagers wave, then the tutorial starts after guideIn seconds. */
+  private firstVisit = false;
+  private guideIn = 0;
   private state: State = 'idle';
   private searchTime = 0;
   private arriveIn = 0;
@@ -196,8 +201,9 @@ export class PlacementSystem extends createSystem({
         'This village is yours to guide. It will settle on your table when it finds one.',
         7,
       );
-      // First visit: Elder Ama teaches the old ways (skippable).
-      if (game.sim.guide.step === 'none') startGuide(game.sim, events);
+      // First visit: once the village has settled the villagers greet the
+      // new god, then Elder Ama begins (skippable).
+      this.firstVisit = game.sim.guide.step === 'none';
     }
     game.returning = false;
   }
@@ -209,6 +215,10 @@ export class PlacementSystem extends createSystem({
     const obj = root?.object3D;
     if (!root || !obj) return;
     this.updateDesk(delta);
+    if (this.guideIn > 0) {
+      this.guideIn -= delta;
+      if (this.guideIn <= 0 && game.sim.guide.step === 'none') startGuide(game.sim, events);
+    }
 
     if (this.state === 'arriving') {
       this.arriveIn -= delta;
@@ -419,6 +429,14 @@ export class PlacementSystem extends createSystem({
     if (this.ritualPending) {
       this.ritualPending = false;
       returnRitual();
+    }
+    if (this.firstVisit) {
+      this.firstVisit = false;
+      const n = greetGod(game.sim);
+      const first = game.sim.villagers.findIndex((v, i) => i > 0 && !v.dead);
+      if (first >= 0) say(first, 'Look! A giant in the sky!', 3, true, 'joy');
+      console.info(`[placement] ${n} villagers wave at their new god`);
+      this.guideIn = RITUAL.greetSeconds;
     }
     console.info(`[placement] village placed using ${source}`);
     events.emit('village.placed', { source });

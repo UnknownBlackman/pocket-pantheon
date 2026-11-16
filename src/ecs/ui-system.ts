@@ -10,8 +10,8 @@ import { createSystem, Quaternion, Vector3, VisibilityState } from '@iwsdk/core'
 import type { Entity, Object3D } from '@iwsdk/core';
 import { chime, setMuted, tick } from '../audio/sfx.ts';
 import { events } from '../core/events.ts';
-import { GESTURES, LAYOUT } from '../sim/rules.ts';
-import { guideStep, skipGuide } from '../sim/tutorial.ts';
+import { GESTURES, LAYOUT, RULES } from '../sim/rules.ts';
+import { activeLesson, guideStep, skipGuide } from '../sim/tutorial.ts';
 import { PressTracker, touchedButton } from '../ui/poke.ts';
 import { CanvasPanel, raiseAbove } from '../ui/canvas-panel.ts';
 import { drawButtons, drawHint, drawPause } from '../ui/panels.ts';
@@ -139,12 +139,18 @@ export class UISystem extends createSystem({
       return 'Plant your village';
     }
     if (game.stage !== 'playing') return '';
-    // The guided tutorial's current step (first visit only).
+    // The guided tutorial's current step (first visit only), with a Skip button...
     const step = guideStep(game.sim);
-    if (!step) return '';
-    this.hintBody = step.body;
-    this.hintSkip = true;
-    return step.title;
+    if (step) {
+      this.hintBody = step.body;
+      this.hintSkip = true;
+      return step.title;
+    }
+    // ...or a lesson Ama is teaching just in time.
+    const lesson = activeLesson(game.sim);
+    if (!lesson) return '';
+    this.hintBody = lesson.body;
+    return lesson.title;
   }
 
   /** True while the hint shows a tutorial step (with a Skip button). */
@@ -301,7 +307,7 @@ export class UISystem extends createSystem({
         this.restartArmedUntil = 0;
         this.restart();
         this.closePause();
-        showToast('A new village', 'Eight villagers wake up on your table.', 5);
+        showToast('A new village', `${RULES.village.startVillagers} villagers wake up on your table.`, 5);
       } else {
         this.restartArmedUntil = uiState.time + 4;
       }

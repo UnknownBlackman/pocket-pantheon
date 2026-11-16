@@ -472,6 +472,8 @@ export const PROGRESS = {
 
 /** Little rituals with the god (sim/presence.ts, sim/powers.ts). */
 export const RITUAL = {
+  /** On a first visit, villagers wave up at the new god this long before Ama speaks. */
+  greetSeconds: 3.5,
   /** Curious villagers touch the resting hand's fingertip this long before hiding. */
   touchSeconds: 2.2,
   /** Children run to a resting hand at this rate per second (whatever their Initiative). */
