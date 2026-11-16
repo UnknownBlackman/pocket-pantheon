@@ -38,6 +38,11 @@ const PAUSE_BUTTONS: readonly PanelButton[] = [
 const PAUSE_BUTTONS_ARMED: readonly PanelButton[] = PAUSE_BUTTONS.map((b) =>
   b.id === 'restart' ? { ...b, label: 'Yes, start over' } : b,
 );
+/** During the tutorial the pause panel offers a skip in place of "New village". */
+const PAUSE_BUTTONS_TUTORIAL: readonly PanelButton[] = [
+  PAUSE_BUTTONS[0],
+  { id: 'skip', label: 'Skip tutorial', x: 334, y: 250, w: 270, h: 96 },
+];
 const SKIP_BUTTONS: readonly PanelButton[] = [{ id: 'skip', label: 'Skip tutorial', x: 404, y: 284, w: 196, h: 52 }];
 const NO_BUTTONS: readonly PanelButton[] = [];
 /** Hint panel position in village space: above the back of the diorama. */
@@ -253,14 +258,17 @@ export class UISystem extends createSystem({
       return;
     }
     const armed = this.restartArmedUntil > uiState.time;
-    const buttons = armed ? PAUSE_BUTTONS_ARMED : PAUSE_BUTTONS;
+    const tutorial = game.sim.guide.active;
+    const buttons = tutorial ? PAUSE_BUTTONS_TUTORIAL : armed ? PAUSE_BUTTONS_ARMED : PAUSE_BUTTONS;
     const hot = this.pokedButton(this.pause, buttons);
-    const key = `${hot}|${armed}`;
+    const key = `${hot}|${armed}|${tutorial}`;
     if (key !== this.pauseKey) {
       this.pauseKey = key;
-      const note = armed
-        ? 'Press again to start over. Your current village will be lost.'
-        : 'Your village waits. Poke a button to continue.';
+      const note = tutorial
+        ? 'Elder Ama is teaching you. Skip her lessons, or poke Resume to carry on.'
+        : armed
+          ? 'Press again to start over. Your current village will be lost.'
+          : 'Your village waits. Poke a button to continue.';
       drawPause(this.pause, buttons, hot, note);
     }
 
@@ -279,6 +287,12 @@ export class UISystem extends createSystem({
     chime();
     if (id === 'resume') {
       this.closePause();
+      return;
+    }
+    if (id === 'skip') {
+      skipGuide(game.sim, events);
+      this.closePause();
+      showToast('Tutorial skipped', 'The village is yours. Poke the stone tablet to read its chronicle.', 5);
       return;
     }
     if (id === 'restart') {
