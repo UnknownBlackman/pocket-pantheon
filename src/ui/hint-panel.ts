@@ -9,7 +9,7 @@ export type HintMode = 'welcome' | 'hidden';
 
 const WELCOME: [string, string, string, string] = [
   'A TINY VILLAGE ON YOUR TABLE',
-  'Tabletop Gods',
+  'Pocket Pantheon',
   'Sit at a table. This game uses your hands,',
   'not controllers. Put controllers down.',
 ];

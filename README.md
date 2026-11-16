@@ -1,8 +1,6 @@
-# Tabletop Gods
+# Pocket Pantheon
 
-A seated, hands-only mixed-reality god game on a real table, built with Meta's
-Immersive Web SDK (IWSDK). See [DESIGN.md](DESIGN.md) for the full design and
-build plan, and [NOTES.md](NOTES.md) for decisions and known issues.
+Become the god of a mixed-reality village which lives on your desk, built with Meta's Immersive Web SDK (IWSDK).
 
 ```sh
 npm install

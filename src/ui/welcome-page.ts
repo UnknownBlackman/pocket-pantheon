@@ -111,5 +111,5 @@ function notSupported(enter: HTMLButtonElement, note: HTMLElement): void {
   enter.textContent = 'Open this page on a Meta Quest';
   note.hidden = false;
   note.textContent =
-    'Tabletop Gods is played in mixed reality. Open this link in the Meta Quest browser, sit at a table and put your controllers down.';
+    'Pocket Pantheon is played in mixed reality. Open this link in the Meta Quest browser, sit at a table and put your controllers down.';
 }

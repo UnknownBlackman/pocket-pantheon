@@ -1,5 +1,5 @@
 /**
- * Procedural low-poly models for the Tabletop Gods village: a medieval
+ * Procedural low-poly models for the Pocket Pantheon village: a medieval
  * hamlet built from merged, vertex-coloured, flat-shaded parts (see
  * lib/kit.ts), one draw call per model where possible.
  *

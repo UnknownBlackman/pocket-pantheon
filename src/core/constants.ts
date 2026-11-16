@@ -1,6 +1,6 @@
 /** App-wide constants that are not gameplay tuning (those live in sim/rules.ts). */
 
-export const APP_NAME = 'Tabletop Gods';
+export const APP_NAME = 'Pocket Pantheon';
 
 /** Name given to the Object3D of the village root, for runtime inspection. */
 export const VILLAGE_ROOT_NAME = 'VillageRoot';

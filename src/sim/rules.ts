@@ -1,5 +1,5 @@
 /**
- * Every tuning number for Tabletop Gods lives here. Nothing else in the code
+ * Every tuning number for Pocket Pantheon lives here. Nothing else in the code
  * base should hard-code a gameplay number. Pure data: no Three.js, no XR.
  */
 
@@ -165,6 +165,7 @@ export const RULES = {
   },
 
   save: {
+    /** Kept at the old name so saves made under the previous name still load. */
     key: 'tabletop-gods-save-v1',
     /** Saves older than this trigger a fast-forward on load (ms). */
     fastForwardAfterMs: 10 * 60 * 1000,
