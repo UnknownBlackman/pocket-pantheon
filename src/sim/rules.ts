@@ -358,6 +358,13 @@ export const LIFE = {
   childPlaySpeed: 1.3,
   /** Children eat from the village stock wherever they are. */
   childEatPerSecond: 0.012,
+  /** Hair greys and the step slows from this age (sim/age.ts)... */
+  greyFrom: 45,
+  greyPace: 0.9,
+  greyFatigue: 1.1,
+  /** ...and elders (from oldAgeFrom) stoop on a cane, walk slowly and tire sooner. */
+  elderPace: 0.68,
+  elderFatigue: 1.35,
   /** From this age the chance of dying of old age each year grows by oldAgeChancePerYear. */
   oldAgeFrom: 58,
   oldAgeChancePerYear: 0.05,

@@ -35,6 +35,7 @@ import {
   Vector2,
   Vector3,
 } from '@iwsdk/core';
+import type { LifeStage } from '../sim/age.ts';
 import type { Place } from './lib/kit.ts';
 
 /** Tunic colours by villager index (also used for speech-bubble name tabs). */
@@ -147,19 +148,29 @@ interface Look {
   /** Long hair in a braid down the back. */
   braid: boolean;
   headwear: Headwear;
+  /** How old they look (sim/age.ts): head size, hair colour, a cane. */
+  stage: LifeStage;
 }
 
-function lookFor(variant: number, female: boolean): Look {
-  const elder = variant === 0;
+function lookFor(variant: number, female: boolean, stage: LifeStage): Look {
+  const ama = variant === 0;
   const styles = female ? WOMEN_HEADWEAR : MEN_HEADWEAR;
+  let hair = ama ? 0xd8d4cc : HAIRS[(variant * 7 + 2) % HAIRS.length];
+  // Hair greys in middle age and turns white in old age.
+  if (stage === 'grey') hair = new Color(hair).lerp(new Color(0xb4b0a8), 0.55).getHex();
+  if (stage === 'elder' && !ama) hair = 0xe4e0d8;
+  let headwear: Headwear = ama ? 'elder' : styles[(variant * 5 + 1) % styles.length];
+  // Children go bare-headed or in a little straw hat.
+  if (stage === 'child') headwear = variant % 3 === 0 ? 'straw' : 'bare';
   return {
-    tunic: elder ? 0x6a4a8a : TUNICS[variant % TUNICS.length],
+    tunic: ama ? 0x6a4a8a : TUNICS[variant % TUNICS.length],
     accent: ACCENTS[(variant * 3 + 1) % ACCENTS.length],
     skin: SKINS[(variant * 3 + 1) % SKINS.length],
-    hair: elder ? 0xd8d4cc : HAIRS[(variant * 7 + 2) % HAIRS.length],
-    dress: elder || female,
-    braid: female && !elder,
-    headwear: elder ? 'elder' : styles[(variant * 5 + 1) % styles.length],
+    hair,
+    dress: ama || female,
+    braid: female && !ama,
+    headwear,
+    stage,
   };
 }
 
@@ -254,7 +265,18 @@ function arm(look: Look, side: 1 | -1): Group {
   g.rotation.z = side * 0.12;
   g.add(s.mesh(side > 0 ? 'ArmLMesh' : 'ArmRMesh'));
   if (side < 0) g.add(hoe());
+  if (side > 0 && look.stage === 'elder') g.add(cane());
   return g;
+}
+
+/** An elder's walking stick in the left hand, from the fist down to the ground. */
+function cane(): Mesh {
+  const s = new Sculpt();
+  const len = SHOULDER_Y - 0.0087 + 0.0006;
+  s.add(new CylinderGeometry(0.00055, 0.0007, len, 6), WOOD, { y: -0.0087 - len / 2 + 0.0012, z: 0.0024, rx: -0.12 });
+  // A curved handle over the fist.
+  s.add(new TorusGeometry(0.0016, 0.0005, 6, 10, Math.PI), WOOD, { y: -0.0076, z: 0.0012, ry: Math.PI / 2 });
+  return s.mesh('Cane');
 }
 
 /** A hoe held in the right hand; the AnimationSystem shows it while farming. */
@@ -360,13 +382,18 @@ function head(look: Look): Group {
  * headwear; `female` picks the outfit: women wear a long kirtle with an
  * apron and a braid (coif, straw hat or bare), men a tunic and hose (hood,
  * feathered cap, straw hat or a bowl cut). Variant 0 is the elder, in a
- * purple gown and shawl with silver hair.
+ * purple gown and shawl with silver hair. `stage` shows their age:
+ * children have big heads and go bare-headed or in straw hats; hair greys
+ * from middle age and turns white for elders, who carry a cane.
  */
-export function createVillager(variant = 0, female = variant % 2 === 0): Group {
-  const look = lookFor(variant, female);
+export function createVillager(variant = 0, female = variant % 2 === 0, stage: LifeStage = 'adult'): Group {
+  const look = lookFor(variant, female, stage);
   const body = new Group();
   body.name = 'Body';
-  body.add(torso(look), leg(look, 1), leg(look, -1), arm(look, 1), arm(look, -1), head(look));
+  const h = head(look);
+  // Children have big heads for their size.
+  if (stage === 'child') h.scale.setScalar(1.18);
+  body.add(torso(look), leg(look, 1), leg(look, -1), arm(look, 1), arm(look, -1), h);
   const root = new Group();
   root.name = 'Villager';
   root.add(body);

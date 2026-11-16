@@ -17,6 +17,8 @@ export const VillagerView = createComponent('VillagerView', {
   activity: { type: Types.String, default: 'idle' },
   /** Seconds in the current activity. */
   activityTime: { type: Types.Float32, default: 0 },
+  /** The life stage the model was built for (sim/age.ts); rebuilt when it changes. */
+  stage: { type: Types.String, default: '' },
 });
 
 /** A building mesh mirroring sim building `simIndex`. */

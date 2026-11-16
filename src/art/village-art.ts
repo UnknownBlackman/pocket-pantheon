@@ -4,6 +4,7 @@
  */
 import { CanvasTexture, CircleGeometry, Mesh, MeshBasicMaterial } from '@iwsdk/core';
 import type { Group, Object3D } from '@iwsdk/core';
+import type { LifeStage } from '../sim/age.ts';
 import type { BuildingKind } from '../sim/types.ts';
 import {
   createCampfire,
@@ -35,9 +36,12 @@ export function makeTablet(): Group {
   return g;
 }
 
-/** Each villager index gets its own look (colours, skin, hair, headwear); women wear dresses. */
-export function makeVillager(index: number, female: boolean): Group {
-  const g = cloneOf(`villager-${index}-${female ? 'f' : 'm'}`, () => createVillager(index, female));
+/**
+ * Each villager index gets its own look (colours, skin, hair, headwear);
+ * women wear dresses; the life stage shows their age.
+ */
+export function makeVillager(index: number, female: boolean, stage: LifeStage = 'adult'): Group {
+  const g = cloneOf(`villager-${index}-${female ? 'f' : 'm'}-${stage}`, () => createVillager(index, female, stage));
   g.add(makeBlobShadow(0.024));
   return g;
 }

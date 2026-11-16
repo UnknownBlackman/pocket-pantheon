@@ -112,11 +112,14 @@ function deskEdge(k: Kit, rand: () => number): void {
         sy: 0.55,
         ry: rand() * 3,
       });
-    } else if (kind < 0.9) {
+    } else if (kind < 0.86) {
       // A twig.
       const ta = rand() * Math.PI;
       const len = 0.006 + rand() * 0.01;
       k.bar(x, H + 0.0006, z, x + Math.cos(ta) * len, H + 0.0006, z + Math.sin(ta) * len, 0.0011, HUE.trunk);
+    } else if (kind < 0.95) {
+      // A wildflower that strayed onto the desk.
+      flower(k, x, z, PETALS[Math.floor(rand() * PETALS.length)], 0.004 + rand() * 0.003, rand);
     } else {
       // A grass tuft escaping onto the desk.
       for (let b = 0; b < 3; b++) {
@@ -248,6 +251,29 @@ function trees(k: Kit, rand: () => number, spots: Spot[]): void {
   }
 }
 
+// ------------------------------------------------------------------ Flowers
+
+/** Petal colours: cream, buttercup, rose, violet, marigold, poppy, cornflower, pink. */
+const PETALS = [0xf2e6c8, 0xe8c14a, 0xc85a8a, 0x8a7ad0, 0xe07a4a, 0xe24a36, 0x5a86d6, 0xf08bb0];
+
+/** A flower: a stem with a leaf and a bright, slightly flattened head. */
+function flower(k: Kit, x: number, z: number, color: number, h: number, rand: () => number): void {
+  k.cyl(0.0004, 0.0004, h, 3, HUE.grassDark, { x, y: H, z });
+  k.cone(0.0011, 0.0028, 3, HUE.leavesLight, { x: x + 0.0008, y: H + h * 0.3, z, rz: -0.9, ry: rand() * 3 });
+  k.ico(0.0017, vary(color, rand, 0.06), { x, y: H + h + 0.0006, z, sy: 0.7 });
+}
+
+/** A daisy: white petals round a yellow eye. */
+function daisy(k: Kit, x: number, z: number, rand: () => number): void {
+  const h = 0.0045 + rand() * 0.002;
+  k.cyl(0.0004, 0.0004, h, 3, HUE.grassDark, { x, y: H, z });
+  for (let p = 0; p < 5; p++) {
+    const a = (p / 5) * Math.PI * 2;
+    k.ico(0.0011, 0xfaf6ea, { x: x + Math.cos(a) * 0.0013, y: H + h, z: z + Math.sin(a) * 0.0013, sy: 0.35 });
+  }
+  k.ico(0.0008, 0xf2c23a, { x, y: H + h + 0.0004, z });
+}
+
 // ------------------------------------------------------------------ Scatter
 
 function scatter(k: Kit, rand: () => number): void {
@@ -277,13 +303,39 @@ function scatter(k: Kit, rand: () => number): void {
       });
     }
   }
-  // Wildflowers: a stem and a bright head.
-  const petals = [0xf2e6c8, 0xe8c14a, 0xc85a8a, 0x8a7ad0, 0xe07a4a];
-  for (let i = 0; i < 45; i++) {
+  // Wildflowers: a stem and a bright head, scattered everywhere.
+  for (let i = 0; i < 110; i++) {
     const p = spot(0.09);
     if (!p) continue;
-    k.cyl(0.0004, 0.0004, 0.006, 3, HUE.grassDark, { x: p.x, y: H, z: p.z });
-    k.ico(0.0016, petals[Math.floor(rand() * petals.length)], { x: p.x, y: H + 0.0065, z: p.z });
+    flower(k, p.x, p.z, PETALS[Math.floor(rand() * PETALS.length)], 0.005 + rand() * 0.003, rand);
+  }
+  // Meadow clumps: a handful of one kind growing together.
+  for (let i = 0; i < 30; i++) {
+    const p = spot(0.1);
+    if (!p) continue;
+    const kind = rand();
+    const n = 3 + Math.floor(rand() * 4);
+    for (let f = 0; f < n; f++) {
+      const a = rand() * Math.PI * 2;
+      const r = rand() * 0.007;
+      const x = p.x + Math.cos(a) * r;
+      const z = p.z + Math.sin(a) * r;
+      if (kind < 0.35) daisy(k, x, z, rand);
+      else flower(k, x, z, kind < 0.6 ? 0xe24a36 : kind < 0.8 ? 0x5a86d6 : 0xf2d24a, 0.005 + rand() * 0.004, rand);
+    }
+  }
+  // A ring of flowers planted round the shrine.
+  const shrine = START_BUILDINGS.find((b) => b.kind === 'shrine');
+  if (shrine) {
+    for (let i = 0; i < 22; i++) {
+      const a = (i / 22) * Math.PI * 2 + rand() * 0.1;
+      const r = CLEAR.shrine - 0.008 + rand() * 0.006;
+      const x = shrine.x + Math.cos(a) * r;
+      const z = shrine.z + Math.sin(a) * r;
+      if (onPath(x, z, 0.012)) continue;
+      if (i % 3 === 0) daisy(k, x, z, rand);
+      else flower(k, x, z, PETALS[i % PETALS.length], 0.006, rand);
+    }
   }
   // Mushrooms in the shade of the back.
   for (let i = 0; i < 10; i++) {

@@ -2,12 +2,13 @@
  * Creates the visible village (diorama, buildings, villagers) as child
  * entities of the VillageRoot entity, mirroring the simulation World.
  */
-import { Group, OneHandGrabbable } from '@iwsdk/core';
+import { DepthOccludable, Group, OneHandGrabbable } from '@iwsdk/core';
 import type { Entity, World } from '@iwsdk/core';
 import { makeFavorPips } from '../art/effects-art.ts';
 import { makeBlobShadow, makeBuilding, makeDiorama, makeTablet, makeVillager } from '../art/village-art.ts';
+import { lifeStage } from '../sim/age.ts';
 import { LAYOUT } from '../sim/rules.ts';
-import type { World as SimWorld } from '../sim/types.ts';
+import type { Villager, World as SimWorld } from '../sim/types.ts';
 import { makeOccludable } from './occlusion.ts';
 import { BuildingView, ChronicleTablet, DioramaView, FavorPips, VillagerView } from './components.ts';
 
@@ -60,7 +61,8 @@ export function buildVillage(world: World, root: Entity, sim: SimWorld): void {
 
 export function spawnVillagerView(world: World, root: Entity, sim: SimWorld, index: number): Entity {
   const v = sim.villagers[index];
-  const obj = makeVillager(index, v.sex === 'f');
+  const stage = lifeStage(v.age);
+  const obj = makeVillager(index, v.sex === 'f', stage);
   obj.name = `Villager:${v.name}`;
   obj.position.set(v.pos.x, LAYOUT.baseHeight, v.pos.z);
   const e = world.createTransformEntity(obj, { parent: root });
@@ -70,9 +72,33 @@ export function spawnVillagerView(world: World, root: Entity, sim: SimWorld, ind
     phase: (index * 0.37) % 1,
     activity: v.activity,
     activityTime: 0,
+    stage,
   });
   // Lift power: a hand pinch grabs the villager. Kept upright while carried.
   e.addComponent(OneHandGrabbable, { rotate: false, translate: true });
   makeOccludable(e);
   return e;
+}
+
+/**
+ * A villager has reached a new life stage (grown up, gone grey, grown old):
+ * swap in the figure for that stage, keeping the entity and its place.
+ */
+export function refreshVillagerLook(e: Entity, v: Villager, index: number): void {
+  const obj = e.object3D;
+  if (!obj) return;
+  const stage = lifeStage(v.age);
+  const body = makeVillager(index, v.sex === 'f', stage).children[0];
+  const old = obj.children[0]; // 'Body'
+  if (!body || !old) return;
+  obj.remove(old);
+  obj.add(body);
+  // AnimationSystem expects the Body first.
+  obj.children.splice(obj.children.indexOf(body), 1);
+  obj.children.unshift(body);
+  e.setValue(VillagerView, 'stage', stage);
+  // Re-apply real-world occlusion to the new meshes.
+  if (e.hasComponent(DepthOccludable)) e.removeComponent(DepthOccludable);
+  makeOccludable(e);
+  console.info(`[life] ${v.name} (${v.age}) now looks ${stage}`);
 }

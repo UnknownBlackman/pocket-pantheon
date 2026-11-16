@@ -3,14 +3,16 @@
  * positions and facing, field growth/dryness. Carried villagers are skipped
  * here; the LiftSystem drives them from the hand.
  */
-import { createSystem, Grabbed } from '@iwsdk/core';
-import type { Material, Mesh } from '@iwsdk/core';
+import { Color, createSystem, Grabbed, MeshStandardMaterial } from '@iwsdk/core';
+import type { Material, Mesh, Object3D } from '@iwsdk/core';
 import { PALETTE } from '../scene-assets/village-materials.ts';
+import { lifeStage } from '../sim/age.ts';
 import { villagerScale } from '../sim/life.ts';
 import { LAYOUT, PRESENCE, RULES } from '../sim/rules.ts';
 import type { Building, World as SimWorld } from '../sim/types.ts';
 import { BuildingView, VillagerView } from './components.ts';
 import { game } from './game.ts';
+import { refreshVillagerLook } from './village-builder.ts';
 
 const TWO_PI = Math.PI * 2;
 /** Riders sit this far above the palm centre (the palm's thickness). */
@@ -34,10 +36,57 @@ function setMaterial(mesh: Mesh | undefined, material: Material): void {
   if (mesh && mesh.material !== material) mesh.material = material;
 }
 
+/** Per-field crop materials, so each field's colour can ripen on its own. */
+interface CropLook {
+  g: number;
+  stalks: MeshStandardMaterial;
+  ears: MeshStandardMaterial;
+}
+const SPROUT = new Color(0x7fc24a);
+const STALK_RIPE = new Color(0xc9c25a);
+const EAR_GREEN = new Color(0xa9d05a);
+const EAR_GOLD = new Color(0xe8be4a);
+
 export class SyncSystem extends createSystem({
   villagers: { required: [VillagerView], excluded: [Grabbed] },
   buildings: { required: [BuildingView] },
 }) {
+  private crops = new WeakMap<Object3D, CropLook>();
+
+  /**
+   * Crops grow in stages with the field's growth: green sprouts, then
+   * stalks rising and filling out, then ears of grain that swell and turn
+   * from green to gold. A harvest resets them to sprouts.
+   */
+  private growCrops(field: Object3D, crops: Object3D, b: Building, k: number): void {
+    let look = this.crops.get(field);
+    if (!look) {
+      const stalks = (PALETTE.crop as MeshStandardMaterial).clone();
+      const ears = (PALETTE.cropRipe as MeshStandardMaterial).clone();
+      look = { g: 0, stalks, ears };
+      this.crops.set(field, look);
+      for (const m of crops.children) (m as Mesh).material = m.name.startsWith('Ears') ? ears : stalks;
+    }
+    const target = Math.min(1, b.growth / RULES.farming.ripeAt);
+    // Harvested: snap back down to sprouts; otherwise grow smoothly.
+    look.g = target < look.g - 0.3 ? target : look.g + (target - look.g) * k;
+    const g = look.g;
+    const ear = Math.max(0, (g - 0.5) / 0.5);
+    look.stalks.color.copy(SPROUT).lerp(STALK_RIPE, Math.max(0, (g - 0.7) / 0.3) * 0.7);
+    look.ears.color.copy(EAR_GREEN).lerp(EAR_GOLD, Math.max(0, (g - 0.75) / 0.25));
+    for (const m of crops.children) {
+      const height = 0.12 + 0.88 * g;
+      if (m.name.startsWith('Ears')) {
+        // Ears ride up with the stalks and swell as they ripen.
+        m.visible = ear > 0.02;
+        m.scale.set(1, height, 0.4 + 0.6 * ear);
+      } else {
+        // Stalks rise and fill out (rows keep their length along x).
+        m.scale.set(1, height, 0.55 + 0.45 * g);
+      }
+    }
+  }
+
   update(delta: number): void {
     const sim = game.sim;
     const posK = 1 - Math.exp(-10 * delta);
@@ -51,6 +100,8 @@ export class SyncSystem extends createSystem({
 
       const p = game.presence;
       if (v.dead) continue; // lying where they fell (LifeSystem fades them out)
+      // A birthday into a new life stage: grown up, greying or grown old.
+      if (e.getValue(VillagerView, 'stage') !== lifeStage(v.age)) refreshVillagerLook(e, v, index);
       obj.scale.setScalar(villagerScale(v.age));
       if (v.ride === 'ride' && v.rideHand && p.hands[v.rideHand].present) {
         // Sitting on the god's palm: stick to the live hand, not the 10 Hz sim.
@@ -126,12 +177,7 @@ export class SyncSystem extends createSystem({
       const soil = obj.children[0] as Mesh | undefined;
       const crops = obj.children[1];
       setMaterial(soil, b.water < RULES.farming.dryBelow ? PALETTE.soilDry : PALETTE.soil);
-      if (crops) {
-        const targetScale = 0.08 + 0.92 * Math.min(1, b.growth / RULES.farming.ripeAt);
-        crops.scale.y += (targetScale - crops.scale.y) * posK;
-        const ripe = b.growth >= RULES.farming.ripeAt * 0.8;
-        for (const row of crops.children) setMaterial(row as Mesh, ripe ? PALETTE.cropRipe : PALETTE.crop);
-      }
+      if (crops) this.growCrops(obj, crops, b, posK);
     }
   }
 }

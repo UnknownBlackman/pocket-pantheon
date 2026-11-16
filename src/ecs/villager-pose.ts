@@ -5,6 +5,7 @@
  * Eyes blink now and then and close in prayer, sleep and death.
  */
 import type { Object3D } from '@iwsdk/core';
+import { lifeStage } from '../sim/age.ts';
 import { RULES } from '../sim/rules.ts';
 import type { Villager } from '../sim/types.ts';
 
@@ -110,6 +111,7 @@ export function poseFor(
   godNear: boolean,
 ): Pose {
   neutral(p);
+  const stage = lifeStage(v.age);
   // A quick blink every few seconds.
   if (t % 3.3 < 0.1) p.eyes = 0.12;
 
@@ -126,8 +128,10 @@ export function poseFor(
   }
   switch (v.activity) {
     case 'walk': {
-      const s = Math.sin(t * 14);
-      p.y = Math.abs(Math.cos(t * 14)) * 0.0022;
+      // Children patter quickly; elders shuffle slowly.
+      const cadence = stage === 'elder' ? 9 : stage === 'child' ? 17 : 14;
+      const s = Math.sin(t * cadence);
+      p.y = Math.abs(Math.cos(t * cadence)) * (stage === 'child' ? 0.0035 : 0.0022);
       p.rz = s * 0.05;
       p.legLx = s * 0.6;
       p.legRx = -s * 0.6;
@@ -333,6 +337,29 @@ export function poseFor(
         p.armLx = p.armRx = -0.15;
       }
     }
+  }
+  // Age shows in how they stand and move.
+  const upright = v.activity === 'walk' || v.activity === 'idle';
+  if (stage === 'elder' && upright) {
+    // A stoop over the cane, short steps, the cane planted ahead.
+    p.rx += 0.18;
+    p.headX -= 0.15;
+    p.legLx *= 0.55;
+    p.legRx *= 0.55;
+    p.armRx *= 0.4;
+    p.armLx = -0.3 + (v.activity === 'walk' ? Math.sin(t * 9) * 0.12 : 0);
+    p.armLz = 0.05;
+    p.y *= 0.4;
+  } else if (stage === 'grey' && upright) {
+    p.rx += 0.06;
+    p.legLx *= 0.85;
+    p.legRx *= 0.85;
+  } else if (stage === 'child' && v.activity === 'idle') {
+    // Children cannot keep still: little hops, swinging arms, looking about.
+    p.y += Math.max(0, Math.sin(t * 3.1) - 0.6) * 0.004;
+    p.armLx = Math.sin(t * 2.4) * 0.35;
+    p.armRx = -p.armLx;
+    p.headY = Math.sin(t * 1.2) * 0.6;
   }
   // The god leans close: idle and walking villagers look up.
   if (godNear && (v.activity === 'idle' || v.activity === 'walk')) p.headX = -0.55 * ease;

@@ -161,8 +161,11 @@ export function createField(): Group {
   crops.name = 'Crops';
   crops.position.y = 0.004;
   const rand = seeded(31);
+  // Each row: leafy stalks ('Row0'..) and, separately, the ears of grain
+  // ('Ears0'..) that appear and ripen as the field grows (SyncSystem).
   for (let i = 0; i < 4; i++) {
     const row = new Kit();
+    const ears = new Kit();
     for (let j = 0; j < 9; j++) {
       const x = -s * 0.4 + (j * s * 0.8) / 8 + (rand() - 0.5) * 0.002;
       for (let b = 0; b < 3; b++) {
@@ -173,11 +176,17 @@ export function createField(): Group {
           rz: (rand() - 0.5) * 0.4,
         });
       }
-      row.ico(0.0016, 0xffffff, { x, y: 0.012, z: 0, sy: 1.5 }); // ear of grain
+      // Two drooping ears of grain on each plant.
+      for (const dx of [-0.0009, 0.0009]) {
+        ears.ico(0.0015, 0xffffff, { x: x + dx, y: 0.0125, z: (rand() - 0.5) * 0.002, sy: 1.6, rz: dx * 220 });
+      }
     }
+    const z = -s * 0.33 + (i * s * 0.66) / 3;
     const mesh = row.mesh(`Row${i}`, PALETTE.crop);
-    mesh.position.z = -s * 0.33 + (i * s * 0.66) / 3;
-    crops.add(mesh);
+    mesh.position.z = z;
+    const earMesh = ears.mesh(`Ears${i}`, PALETTE.cropRipe);
+    earMesh.position.z = z;
+    crops.add(mesh, earMesh);
   }
   root.add(crops);
 

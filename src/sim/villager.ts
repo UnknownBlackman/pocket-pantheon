@@ -1,6 +1,7 @@
 /**
  * Villager needs, beliefs and decisions. Pure simulation code.
  */
+import { ageFatigue, agePace } from './age.ts';
 import type { EventBus } from '../core/events.ts';
 import { addChronicle } from './chronicle.ts';
 import { clamp, clamp01, clampToDisc, dist, stepTowards } from './math.ts';
@@ -318,7 +319,7 @@ export function updateVillager(world: World, v: Villager, dt: number, bus?: Even
   v.needs.hunger = clamp01(v.needs.hunger + hungerRate * dt);
   v.needs.fatigue = clamp01(
     v.needs.fatigue +
-      (night ? R.needs.fatiguePerSecondNight : R.needs.fatiguePerSecond) * dt,
+      (night ? R.needs.fatiguePerSecondNight : R.needs.fatiguePerSecond) * ageFatigue(v.age) * dt,
   );
   if (v.blessed > 0) v.blessed = Math.max(0, v.blessed - dt);
   // Children eat from the village stock wherever they are.
@@ -412,7 +413,9 @@ export function updateVillager(world: World, v: Villager, dt: number, bus?: Even
   // Movement then work.
   if (v.target) {
     const pace =
-      (v.limp > 0 ? LIFE.limpSpeed : 1) * (childOf(v) && v.intent === 'play' ? LIFE.childPlaySpeed : 1);
+      (v.limp > 0 ? LIFE.limpSpeed : 1) *
+      (childOf(v) && v.intent === 'play' ? LIFE.childPlaySpeed : 1) *
+      agePace(v.age);
     const arrived = stepTowards(v.pos, v.target, R.village.walkSpeed * pace * dt);
     if (!arrived) {
       v.activity = 'walk';

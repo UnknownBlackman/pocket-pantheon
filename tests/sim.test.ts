@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import { EventBus } from '../src/core/events.ts';
 import { dropVillager, liftVillager } from '../src/sim/powers.ts';
 import { random } from '../src/sim/random.ts';
+import { ageFatigue } from '../src/sim/age.ts';
 import { RITUAL, RULES } from '../src/sim/rules.ts';
 import type { Activity, World } from '../src/sim/types.ts';
 import { createWorld, duskScore, runFor, tick } from '../src/sim/world.ts';
@@ -96,7 +97,8 @@ describe('needs', () => {
     v.needs.fatigue = 0;
     runFor(w, 10);
     assert.ok(Math.abs(v.needs.hunger - 10 * RULES.needs.hungerPerSecond) < 1e-6);
-    assert.ok(Math.abs(v.needs.fatigue - 10 * RULES.needs.fatiguePerSecond) < 1e-6);
+    // Elder Ama tires sooner with age (sim/age.ts).
+    assert.ok(Math.abs(v.needs.fatigue - 10 * RULES.needs.fatiguePerSecond * ageFatigue(v.age)) < 1e-6);
   });
 
   it('carried villagers do not change needs', () => {
@@ -180,5 +182,17 @@ describe('lift and drop', () => {
     runFor(w, 5);
     assert.deepEqual(v.pos, pos);
     assert.equal(v.carried, true);
+  });
+});
+
+describe('ageing', () => {
+  it('shows in life stages, pace and stamina', async () => {
+    const { lifeStage, agePace } = await import('../src/sim/age.ts');
+    assert.equal(lifeStage(5), 'child');
+    assert.equal(lifeStage(30), 'adult');
+    assert.equal(lifeStage(50), 'grey');
+    assert.equal(lifeStage(60), 'elder');
+    assert.ok(agePace(60) < agePace(50) && agePace(50) < agePace(30));
+    assert.ok(ageFatigue(60) > ageFatigue(30));
   });
 });
