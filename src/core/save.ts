@@ -44,6 +44,7 @@ export function deserializeWorld(json: string): World | null {
     w.traffic ??= [];
     // Saves from before the guided tutorial: those players already know the game.
     w.guide ??= { step: 'done', active: false };
+    w.deathsToday ??= 0;
     for (const v of w.villagers) {
       v.age ??= 30;
       v.dead ??= false;

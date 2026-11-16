@@ -17,7 +17,7 @@ export const RULES = {
     /** Real seconds per phase. Day lengths follow the session loop table. */
     placeSeconds: 20,
     daySeconds: [120, 150, 150] as readonly number[],
-    duskSeconds: 90,
+    duskSeconds: 60,
     /** Fraction of a day (timeOfDay) after which it counts as night. */
     nightStart: 0.8,
   },
@@ -367,14 +367,18 @@ export const LIFE = {
   elderFatigue: 1.35,
   /** From this age the chance of dying of old age each year grows by oldAgeChancePerYear. */
   oldAgeFrom: 58,
-  oldAgeChancePerYear: 0.05,
+  oldAgeChancePerYear: 0.035,
   /** Births happen at day's end when the stock has this much food. */
   birthFood: 45,
   birthChance: 0.55,
   /** A villager starving (hunger at 1) this long dies. */
-  starveSeconds: 45,
+  starveSeconds: 100,
+  /** Hunger and lightning take at most this many villagers a day (the rest hang on). */
+  famineDeathsPerDay: 1,
+  /** Hunger and lightning never leave the village with fewer adults than this. */
+  protectedAdults: 2,
   /** Chance per second that lightning strikes an unsheltered villager at full storm. */
-  lightningPerSecond: 0.0015,
+  lightningPerSecond: 0.0004,
   /** Injuries from the god's hand: a daze, then a limp at half speed. */
   limpSeconds: 30,
   limpSpeed: 0.5,
@@ -384,7 +388,7 @@ export const LIFE = {
   mournSeconds: 5,
   mournRadius: 0.2,
   /** Faith lost by everyone when someone dies of starvation or lightning. */
-  neglectFaith: -0.02,
+  neglectFaith: -0.01,
 } as const;
 
 /** The storm and swatting it away (sim/storm.ts). */

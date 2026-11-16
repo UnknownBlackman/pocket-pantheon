@@ -35,8 +35,24 @@ export function aliveCount(world: World): number {
 
 // ------------------------------------------------------------------ Death
 
+/**
+ * Whether hunger or lightning may take this villager now: never the elder
+ * (Ama), at most LIFE.famineDeathsPerDay a day, and never below
+ * LIFE.protectedAdults adults. Old age is not limited here.
+ */
+export function mayPerish(world: World, v: Villager): boolean {
+  if (v.id === 'v0') return false;
+  if (world.deathsToday >= LIFE.famineDeathsPerDay) return false;
+  const adults = world.villagers.filter((o) => !o.dead && !isChild(o)).length;
+  return adults > LIFE.protectedAdults;
+}
+
 export function kill(world: World, v: Villager, cause: DeathCause, bus?: EventBus): void {
   if (v.dead) return;
+  const sudden = cause !== 'old age';
+  // Only the first sudden death of a day shakes the village's faith.
+  const firstToday = sudden && world.deathsToday === 0;
+  if (sudden) world.deathsToday += 1;
   v.dead = true;
   v.deathCause = cause;
   v.activity = 'dead';
@@ -60,7 +76,7 @@ export function kill(world: World, v: Villager, cause: DeathCause, bus?: EventBu
     children: world.villagers.filter((o) => o.parents.includes(v.id)).map((o) => o.name),
   });
   addChronicle(world, 'died', { name: v.name, age: v.age, cause: causeText(cause) }, [v.id], bus);
-  if (cause !== 'old age') {
+  if (firstToday) {
     // The village wonders why its god let this happen.
     for (const o of world.villagers) {
       if (!o.dead) o.beliefs.faith = clamp01(o.beliefs.faith + LIFE.neglectFaith);
@@ -104,7 +120,8 @@ export function updateLife(world: World, dt: number, bus?: EventBus): void {
     if (v.needs.hunger >= 0.999) v.starving += dt;
     else v.starving = Math.max(0, v.starving - dt * 2);
     if (v.starving >= LIFE.starveSeconds) {
-      kill(world, v, 'starvation', bus);
+      if (mayPerish(world, v)) kill(world, v, 'starvation', bus);
+      else v.starving = 0; // hangs on; the clock starts again
       continue;
     }
     if (
@@ -113,8 +130,10 @@ export function updateLife(world: World, dt: number, bus?: EventBus): void {
       !isSheltered(world, v.pos.x, v.pos.z) &&
       random(world) < LIFE.lightningPerSecond * storm * dt
     ) {
-      bus?.emit('lightning', { x: v.pos.x, z: v.pos.z });
-      kill(world, v, 'lightning', bus);
+      if (mayPerish(world, v)) {
+        bus?.emit('lightning', { x: v.pos.x, z: v.pos.z });
+        kill(world, v, 'lightning', bus);
+      }
     }
   }
 }

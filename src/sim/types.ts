@@ -181,6 +181,8 @@ export interface World {
   weather: Weather;
   favor: number; // 0..10, not 0..1
   food: number; // village stock, 0..100
+  /** Deaths from hunger or lightning today (sim/life.ts). */
+  deathsToday: number;
   villagers: Villager[];
   buildings: Building[];
   effects: ActiveEffect[];

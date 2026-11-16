@@ -139,6 +139,7 @@ export function createWorld(seed = 1): World {
     weather: 'clear',
     favor: R.favor.start,
     food: 40,
+    deathsToday: 0,
     villagers: [],
     buildings: [],
     effects: [],
@@ -250,6 +251,7 @@ function endOfDay(world: World, bus?: EventBus): void {
 }
 
 function startDay(world: World, bus?: EventBus): void {
+  world.deathsToday = 0;
   world.timeOfDay = 0;
   world.stats = freshStats();
   setWeather(world, weatherForDay(world), bus);
