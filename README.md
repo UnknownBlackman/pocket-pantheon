@@ -1,140 +1,160 @@
 # Pocket Pantheon
 
-> A living miniature civilization that makes a home on your desk.
+*A living miniature civilization that makes a home on your desk.*
 
-Put on your Quest. A tiny medieval village drifts down onto your real table, and
-its people stop what they are doing, look up, and wave at the giant in the sky.
+Imagine putting on your Quest and watching a tiny village float down onto your
+real table. The villagers stop what they're doing, look up, and wave at the giant
+in the sky.
 
-That's you. Use your bare hands to pick up a farmer and set her down in a field. Hold a palm out and a
-villager climbs on and rides it. Stretch a hand over a drought-cracked field and
-it rains. Rest your hand flat on the table and the curious ones run up to touch
-your fingertips, then scatter to hide.
+That giant is you.
 
-No controllers, no menus, no walking around. Sit at a table and play with your hands.
+From there it's all hands. Pinch up a farmer and set her down in a field. Hold
+out an open palm and watch someone climb on for a ride. When the fields crack
+in a drought, stretch your hand over them and it rains. Rest your hand flat on the
+table and the curious ones come running to touch your fingertips, then scatter
+to hide behind your hand.
 
-## Why it's different
+There are no controllers and no menus, and you never have to stand up. Sit down at
+a table and play with your hands.
 
-**It's a god game, but the point is restraint.** Every villager has two beliefs:
-*Faith* in you and *Initiative* of their own. Bless them, rescue them, rain on
-their crops, and they trust you more, but they also lean on you more. Help too
-much and they stand idle, waiting for a sign. Stay away and Faith drifts down and
-the fields go unattended. The game is the balance, and at dusk the village
-gives you a name for how you played: *the Gentle Hand*, *the Storm-Caller*, *the
-Lifter*, *the Balanced One*, *the Distant One*.
+## The trick is knowing when to stop
 
-**Your real hands are part of the world.** Villagers see your shadow and look up
-in awe. A hand resting on the table becomes a mountain to hide behind. The
-real desk becomes the ground: the village grows straight out of your wood
-grain, and on headsets with depth sensing a real mug or hand in front of it
-hides the villagers behind it.
+Every villager has two kinds of belief: *Faith* in you, and *Initiative* of their own.
 
-**The village outlives your session.** Close the browser and come back later:
-every hour away becomes a day of village life, up to eight. Crops were
-harvested, children were born and grew up, and an elder may have died and
-been laid to rest in the graveyard. Everyone runs to the edge to cheer your
-return, and the news waits for you on a stone tablet.
+Bless them, rescue them, rain on their crops, and they trust you more. But
+they start leaning on you too. Help too much and you'll find people standing
+around waiting for a sign. Stay away and their faith drifts, and the fields go
+untended.
 
-## What you can do
+So the game is really about balance. At dusk the village decides what to call
+you, based on how you played: *the Gentle Hand*, *the Storm-Caller*, *the Lifter*,
+*the Balanced One*, or, if you barely showed up, *the Distant One*.
 
-Everything is a hand gesture. Nothing needs a controller.
+## Your hands, your desk
 
-| Gesture | What happens |
-| --- | --- |
-| **Pinch** a villager and carry them | Set them on a field, hut or shrine and they get to work. Drop them from too high and they limp. |
-| **Point** at someone and hold | A blessing: they grow braver and more faithful (costs Favor). |
-| **Palm down** over a field | Rain for the crops. |
-| **Both palms down** over the village | A golden shelter against the storm. |
-| **Rest a hand in a storm cloud** | Calm it. Calm them all and the storm breaks early. |
-| **Open palm up** at the village's edge | The faithful climb on and ride your hand. |
-| **Rest your hand flat** on the table | Curious villagers touch your fingertips, then play hide-and-seek behind your hand. Lift it to find them. |
-| **Wave** | They wave back. |
-| **Look or point** at a villager | See their mood, needs and beliefs. |
-| **Turn your left palm** to your face | Your stats: believers, the hungry, the remembered dead. |
-| **Both palms to your face** | Pause. |
-| **Both palms up** at opposite edges, held still | Lift the whole village and carry it somewhere else. |
+We wanted the real room to be part of the game, not just a backdrop.
 
-Elder Ama teaches carrying, blessing and riding in about a minute. The rest
-arrive when they matter: the drought teaches rain, the storm teaches shelter
-and calming, and waving and pausing come along later.
+The village looks for your table and settles onto it, shrinking a little if
+the table is small. Then it does something we love: the little earthen
+base sinks away and the village grows straight out of your actual desk, wood
+grain and all. If your headset has depth sensing, a real mug or your own
+hand in front of the village hides the villagers behind it, the way it would
+with real objects.
 
-## A village with a life of its own
+The villagers notice you, too. They see your shadow and look up in awe. They
+wave back when you wave. Rest your hand on the table and it becomes the best
+hiding spot in the village.
 
-- **Five people, then more.** Elder Ama and four villagers found the village. They farm, rest,
-  pray and wander on their own needs and beliefs. Prayers are your only source
-  of Favor, which pays for every power.
-- **Birth, growing up and growing old.** Children are born at day's end when
-  there is food to spare, play near their parents, grow up, grey, stoop on a cane
-  and, in the end, are laid to rest. The village caps at fourteen.
-- **Weather with stakes.** A drought dries the soil. A storm sends panicked
-  villagers running and its lightning can strike. Shelter and calm the storm,
-  or let them learn to cope.
-- **It remembers.** Names, parents, children, a chronicle of the day's story and
-  a graveyard where you can poke a headstone to learn who lies there.
-- **It grows.** Over sessions, worn routes become stepping stones, cottages gain
-  cobbled aprons and gardens, and the tablet gains carvings.
-- **It waits for you.** Walk away from the table and the day clock holds.
+## Come back tomorrow
 
-## Built for mixed reality
+Close the game and come back later, and the village will have carried on
+without you. Every hour you're away counts as a day of village life, up to
+eight. Crops get harvested, children are born and grow up, and sometimes an
+elder dies and is laid to rest in the graveyard. When you return, everyone runs
+to the edge of the table to cheer, and what happened while you were gone is
+waiting on a stone tablet beside the shrine.
 
-- **Hands only, seated.** Gestures are recognised straight from XR hand joints
-  (pinch, point, open palm, palm direction, hold time, speed), with no controller
-  fallback. The whole village is 60 cm across and every interaction is within
-  reach.
-- **Real table, real depth.** The village finds your table through plane
-  detection or a look-down hit test, shrinks to fit small ones, anchors there, and sinks its
-  earth pedestal into the real surface. With depth sensing, real hands and
-  objects occlude the miniature.
-- **FoV-aware.** The village, panels and speech bubbles stay in a small central
-  area so nothing important sits at the edge of the view.
-- **Entirely procedural.** Every model, texture, sound and note is generated in
-  code: low-poly vertex-coloured villagers, an adaptive modal soundtrack
-  (a drone, plucked strings and a recorder that follow day, dusk, night and
-  storm), wind, fire crackle, birdsong and babbled villager voices. No asset
-  files, no network calls, no third-party services. The production build is under 4 MB.
+Walk away from the table mid-game and the village simply waits for you.
 
-## Run it
+## What your hands can do
+
+Everything is a gesture, and none of it needs a controller.
+
+- **Pinch a villager and carry them.** Set them down on a field, a hut or the
+  shrine and they'll get to work. Drop them from too high and they'll limp
+  home.
+- **Point at someone and hold.** That's a blessing. It costs a little Favor.
+- **Hold a flat palm over a field.** Rain.
+- **Hold both palms over the village.** A golden shelter, for when the storm comes.
+- **Rest your hand in a storm cloud.** It calms. Calm every cloud and the storm breaks early.
+- **Open palm, facing up, at the edge of the village.** The faithful climb on for a ride.
+- **Rest your hand flat on the table.** The curious come to touch your
+  fingertips and then play hide-and-seek. Lift your hand to find them.
+- **Wave.** They wave back.
+- **Look or point at a villager.** You'll see how they're feeling.
+- **Turn your left palm towards you.** A little card shows your stats: who
+  believes, who's hungry, who you've lost.
+- **Both palms towards your face.** Pause.
+- **Both palms up at opposite edges, held still.** Lift the whole village and
+  carry it somewhere new.
+
+You won't have to memorise any of this. Elder Ama teaches carrying, blessing
+and riding in your first minute, and the rest comes when it matters: the
+drought teaches rain, the storm teaches shelter and calming, and waving and
+pausing come along later.
+
+## A village that lives on its own
+
+Five villagers found the settlement: Elder Ama and four others. Left alone,
+they farm, rest, pray and wander about, guided by their own needs and beliefs.
+Their prayers are where your Favor comes from, and Favor pays for every power
+you use.
+
+They're born, they grow up, they go grey, and eventually they stoop over a
+cane and are laid to rest. Children play near their parents, and the village
+tops out at fourteen. A storm sends people running in panic, and its lightning
+can strike. Villagers remember each other, and you can poke a headstone to
+learn who lies there and who they left behind.
+
+The place changes over time too. Paths wear into stepping stones where people
+walk most, cottages gain cobbled doorways and little gardens, and the tablet by the shrine
+gets a new carving after every session.
+
+## For the curious: how it works
+
+Pocket Pantheon is built with Meta's [Immersive Web SDK](https://iwsdk.dev) on
+Three.js, in TypeScript. A few things we're proud of:
+
+- **Hands only, and seated.** Gestures are recognised directly from the hand
+  joints, using pinch distance, which fingers are extended, which way the palm
+  faces, how still it is and how long you hold it. There's no controller
+  fallback. The whole village is 60 cm across, so everything is within reach.
+- **It knows your table.** Plane detection and a look-down hit test find the
+  surface, and an anchor keeps the village there.
+- **Everything is made in code.** No models, textures or audio files, and no
+  network calls. The villagers, huts and fields are generated low-poly meshes.
+  The music is synthesised live: a drone, plucked strings and a recorder that shift
+  with the time of day and the weather, alongside wind, a crackling fire, birdsong
+  and babbled villager voices. The whole production build is under 4 MB.
+- **The game and the graphics are kept apart.** All the rules live in a plain,
+  seeded simulation that knows nothing about the renderer, so we can test the
+  important parts (needs, beliefs, births, ageing, even fast-forwarding a day you
+  missed) quickly, with no headset. Every tuning number sits in one file,
+  `src/sim/rules.ts`.
+
+```text
+src/
+  sim/           the game: pure, seeded, deterministic logic
+  ecs/           IWSDK systems that show and drive it
+  xr/            gesture recognition, table finding, placement
+  scene-assets/  procedural models: villagers, huts, fields, the diorama
+  art/           effects, weather and hand visuals
+  ui/            manuscript-style panels, speech bubbles, the welcome page
+  audio/         music, ambience, voices and sound effects
+  core/          event bus, constants, save and load
+tests/           Node tests for the simulation
+```
+
+## Try it
 
 ```sh
 npm install
 npm run dev
 ```
 
-This starts the IWSDK dev server and an emulated Quest browser. To play on a
-real headset, run `npm run dev:status`, open one of the network URLs on a Quest
-on the same Wi-Fi, accept the local certificate warning, turn on **hand
-tracking** in the headset's settings, put the controllers down, and press
-**Enter the village**.
+That starts the dev server and opens an emulated Quest in your browser.
 
-Other commands:
+To play on a real headset, run `npm run dev:status` and open one of the network
+URLs in the Quest browser (on the same Wi-Fi). Accept the certificate warning,
+make sure **hand tracking** is on in the headset settings, put your controllers
+down, and press **Enter the village**.
+
+A few other commands you might want:
 
 ```sh
-npm test            # Node unit tests for the simulation (no headset needed)
+npm test         # simulation tests, no headset needed
 npm run typecheck
-npm run build       # production build in dist/
+npm run build    # production build in dist/
 ```
 
-On the flat browser page, **Shift+F** starts a brand-new village.
-
-## How it's built
-
-Built with Meta's [Immersive Web SDK](https://iwsdk.dev) (an ECS on Three.js)
-and TypeScript, bundled with Vite.
-
-```text
-src/
-  index.ts      world creation and system registration
-  sim/          the whole game as pure, seeded, deterministic logic (no Three.js or XR)
-  ecs/          IWSDK components and systems that show and drive it
-  xr/           gesture recognition, table finding, placement, gaze
-  scene-assets/ procedural models: villagers, huts, fields, the diorama
-  art/          effects, weather and hand visuals
-  ui/           manuscript-style panels, speech bubbles, the welcome page
-  audio/        procedural music, ambience, voices and effects
-  core/         event bus, constants, save and load
-tests/          Node tests for the simulation
-```
-
-The simulation never touches the renderer, so everything that matters (needs,
-beliefs, births, weather, ageing, fast-forwarding a missed day) is covered by
-fast unit tests, and the gameplay numbers all live in one file,
-`src/sim/rules.ts`.
+On the flat browser page, press **Shift+F** to start a brand-new village.
