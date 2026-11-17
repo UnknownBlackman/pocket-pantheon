@@ -80,6 +80,8 @@ export class EffectsSystem extends createSystem({
 
   private animateDrops(obj: Object3D, time: number, level: number): void {
     const children = obj.children;
+    // A called rain cloud sits under the palm that called it; others at the usual height.
+    const height = (obj.userData.cloudHeight as number | undefined) ?? CLOUD_HEIGHT;
     // Drop positions in village space, to test them against the god's hands.
     const s = obj.scale.x;
     const cos = Math.cos(obj.rotation.y);
@@ -87,11 +89,11 @@ export class EffectsSystem extends createSystem({
     for (let i = 0; i < children.length; i++) {
       const c = children[i];
       if (c.name === 'Cloud') {
-        c.position.y = CLOUD_HEIGHT + Math.sin(time * 0.8) * 0.004;
+        c.position.y = height + Math.sin(time * 0.8) * 0.004;
         continue;
       }
       const phase = ((c.userData.phase as number) + time * 1.6) % 1;
-      c.position.y = CLOUD_HEIGHT * (1 - phase) - 0.005;
+      c.position.y = height * (1 - phase) - 0.005;
       c.visible = level > (c.userData.phase as number) * 0.9;
       if (!c.visible) continue;
       const x = obj.position.x + (c.position.x * cos + c.position.z * sin) * s;

@@ -20,7 +20,7 @@ import { SIDES } from '../sim/presence.ts';
 import type { HandSide } from '../sim/types.ts';
 import { guideAllows } from '../sim/tutorial.ts';
 import { stormCloudSpot, swatCloud } from '../sim/storm.ts';
-import { makeRainCloud, makeShelterDome } from '../art/weather-art.ts';
+import { makeRainCloud, makeShelterDome, rainCloudHeight } from '../art/weather-art.ts';
 import { events } from '../core/events.ts';
 import { blessBuilding, blessVillager, rain, shelter } from '../sim/powers.ts';
 import { GESTURES, LAYOUT, RULES, STORM } from '../sim/rules.ts';
@@ -76,6 +76,8 @@ export class PowerSystem extends createSystem({
   private palmCooldown = 0;
   private palmX = 0;
   private palmZ = 0;
+  /** Height above the table of the palm calling rain (the cloud forms just under it). */
+  private palmHeight = 0;
   private palmRing: ProgressRing | null = null;
   private palmHeldBack = 0;
 
@@ -288,6 +290,7 @@ export class PowerSystem extends createSystem({
       this.palmZ = (this.palmLocal.left.z + this.palmLocal.right.z) / 2;
     } else if (choice.hand) {
       const p = this.palmLocal[choice.hand];
+      this.palmHeight = this.palmIn[choice.hand].height;
       const field = mode === 'rain' ? this.fieldUnder(p.x, p.z) : null;
       this.palmX = field ? field.x : p.x;
       this.palmZ = field ? field.z : p.z;
@@ -364,7 +367,10 @@ export class PowerSystem extends createSystem({
   private spawnWeatherEffect(kind: 'rain' | 'shelter', x: number, z: number): void {
     const root = this.root();
     if (!root) return;
-    const obj = kind === 'rain' ? makeRainCloud(RULES.powers.rainRadius) : makeShelterDome(RULES.powers.shelterRadius);
+    const obj =
+      kind === 'rain'
+        ? makeRainCloud(RULES.powers.rainRadius, rainCloudHeight(this.palmHeight))
+        : makeShelterDome(RULES.powers.shelterRadius);
     obj.position.set(x, LAYOUT.baseHeight, z);
     const e = this.world.createTransformEntity(obj, { parent: root });
     e.addComponent(PowerEffect, {

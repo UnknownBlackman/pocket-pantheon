@@ -32,6 +32,20 @@ const domeRimMat = new MeshBasicMaterial({ color: 0xffd36b, transparent: true, o
 /** Cloud height above the table surface, metres. */
 export const CLOUD_HEIGHT = 0.14;
 
+/** A called rain cloud forms this far below the palm that called it, metres. */
+const RAIN_CLOUD_BELOW_PALM = 0.04;
+/** ...but never lower than this (clear of the hut roofs), metres. */
+const RAIN_CLOUD_MIN_HEIGHT = 0.055;
+
+/**
+ * Height (above the table) for a rain cloud called by a palm at `palmHeight`:
+ * just under the hand, so the rain comes from beneath your palm rather than a
+ * cloud appearing above it. Never higher than the usual cloud height.
+ */
+export function rainCloudHeight(palmHeight: number): number {
+  return Math.min(CLOUD_HEIGHT, Math.max(RAIN_CLOUD_MIN_HEIGHT, palmHeight - RAIN_CLOUD_BELOW_PALM));
+}
+
 /**
  * A cluster of flattened puffs. `ring` places them around the edge only
  * (leaving the middle open so the village stays visible from the seat).
@@ -65,11 +79,15 @@ function drops(g: Group, radius: number, count: number): void {
   }
 }
 
-export function makeRainCloud(radius: number): Group {
+/** A rain cloud `height` above the table (its drops fall from there; see effects-system). */
+export function makeRainCloud(radius: number, height = CLOUD_HEIGHT): Group {
   const g = new Group();
   g.name = 'RainCloud';
-  g.add(cloud(radius, cloudMat, 5));
+  const c = cloud(radius, cloudMat, 5);
+  c.position.y = height;
+  g.add(c);
   drops(g, radius * 0.9, 28);
+  g.userData.cloudHeight = height;
   return g;
 }
 
