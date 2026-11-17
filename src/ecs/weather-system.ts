@@ -7,7 +7,8 @@
  *   World.snowCover so it builds up while it snows and melts afterwards;
  * - villagers pull up their hoods ('RainHood') in rain and snow.
  * Everything lives in village space, so it follows the village (and sits on
- * the real desk in Living Desk mode).
+ * the real desk in Living Desk mode). None of it shows on the welcome page
+ * (outside XR), which keeps a clean view of the village.
  */
 import {
   BoxGeometry,
@@ -23,6 +24,7 @@ import {
   MeshStandardMaterial,
   Quaternion,
   Vector3,
+  VisibilityState,
 } from '@iwsdk/core';
 import type { Entity, Object3D } from '@iwsdk/core';
 import { SNOW_MAT } from '../scene-assets/village-materials.ts';
@@ -34,9 +36,9 @@ import { makeOccludable } from './occlusion.ts';
 const R = RULES.village.radius;
 const H = LAYOUT.baseHeight;
 const SKY = 0.2; // where rain and snow start (and the clouds float), above the village surface
-const RAIN_DROPS = 420;
+const RAIN_DROPS = 150; // a light drizzle, not a downpour
 const SNOW_FLAKES = 320;
-const RAIN_SPEED = 0.62; // m/s: a little slower than life, so it reads as rain at this scale
+const RAIN_SPEED = 0.5; // m/s: a gentle fall at this scale
 const SNOW_SPEED = 0.035;
 const FADE_PER_SECOND = 0.35;
 const FLUTTER_AXIS = new Vector3(0.3, 1, 0.2).normalize();
@@ -156,7 +158,7 @@ export class WeatherSystem extends createSystem({
     g.add(this.clouds);
 
     this.rainMat = new MeshBasicMaterial({ color: 0xd6ecff, transparent: true, opacity: 0, depthWrite: false });
-    this.rain = new InstancedMesh(new BoxGeometry(0.0009, 0.016, 0.0009), this.rainMat, RAIN_DROPS);
+    this.rain = new InstancedMesh(new BoxGeometry(0.0006, 0.011, 0.0006), this.rainMat, RAIN_DROPS);
     this.rain.frustumCulled = false;
     g.add(this.rain);
 
@@ -191,6 +193,15 @@ export class WeatherSystem extends createSystem({
     if (!root?.object3D) return;
     if (!this.group) this.build(root);
     const sim = game.sim;
+    // The welcome page (outside XR) shows the village without weather.
+    const inXR = this.world.visibilityState.peek() !== VisibilityState.NonImmersive;
+    if (!inXR) {
+      this.rainLevel = this.snowLevel = 0;
+      this.group!.visible = false;
+      this.applyCover(0);
+      this.applyHoods(false);
+      return;
+    }
     const day = game.stage === 'playing' && sim.phase === 'day';
     const step = Math.min(1, delta * FADE_PER_SECOND);
     const towards = (v: number, target: number) => v + Math.sign(target - v) * Math.min(Math.abs(target - v), step);
@@ -232,7 +243,7 @@ export class WeatherSystem extends createSystem({
   private updateRain(delta: number): void {
     this.rain.visible = this.rainLevel > 0.01;
     if (!this.rain.visible) return;
-    this.rainMat.opacity = 0.8 * this.rainLevel;
+    this.rainMat.opacity = 0.5 * this.rainLevel;
     for (let i = 0; i < this.drops.length; i++) {
       const d = this.drops[i];
       d.y -= RAIN_SPEED * delta;

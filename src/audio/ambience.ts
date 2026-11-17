@@ -31,7 +31,7 @@ const LEVELS: Record<AmbienceMood, Level> = {
   dusk: { wind: 0.04, windHz: 450, fire: 0.6, crackles: 7, rain: 0, birds: false },
   night: { wind: 0.03, windHz: 380, fire: 0.75, crackles: 8, rain: 0, birds: false },
   storm: { wind: 0.13, windHz: 750, fire: 0.2, crackles: 3, rain: 0.05, birds: false },
-  rain: { wind: 0.04, windHz: 560, fire: 0.25, crackles: 3, rain: 0.045, birds: false, rumble: true },
+  rain: { wind: 0.025, windHz: 480, fire: 0.3, crackles: 4, rain: 0.014, birds: false, rumble: true },
   snow: { wind: 0.028, windHz: 300, fire: 0.65, crackles: 6, rain: 0, birds: false },
 };
 
@@ -138,7 +138,7 @@ function rumble(ac: AudioContext, t: number): void {
   lp.frequency.value = 110 + Math.random() * 60;
   lp.Q.value = 0.7;
   const g = ac.createGain();
-  const peak = 0.22 + Math.random() * 0.12;
+  const peak = 0.12 + Math.random() * 0.07;
   const len = 3 + Math.random() * 2;
   g.gain.setValueAtTime(0.0001, t);
   g.gain.linearRampToValueAtTime(peak * 0.5, t + 0.4);
