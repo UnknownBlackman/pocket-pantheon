@@ -40,6 +40,14 @@ const R = RULES.village.radius;
 const H = LAYOUT.baseHeight;
 const TOP = H + 0.0004; // decals sit a hair above the grass
 
+/**
+ * Overlapping flat layers must never share a height, or the depth test can't
+ * tell which is in front and they shimmer in stripes as the view moves
+ * (z-fighting). Each decal gets its own few-micrometre step: invisible, but far
+ * above depth precision at arm's length.
+ */
+const LAYER_STEP = 0.000006;
+
 /** Footprint radius kept clear around each building kind. */
 const CLEAR: Record<string, number> = { field: 0.075, hut: 0.06, shrine: 0.065, campfire: 0.07 };
 const TABLET = { x: 0.095, z: -0.2 };
@@ -91,6 +99,7 @@ function pedestal(k: Kit): void {
  * past where the rim would be, loose stones and runaway twigs.
  */
 function deskEdge(k: Kit, rand: () => number): void {
+  let speck = 0;
   for (let i = 0; i < 90; i++) {
     const a = rand() * Math.PI * 2;
     // Denser near the old rim, thinning outwards.
@@ -103,7 +112,8 @@ function deskEdge(k: Kit, rand: () => number): void {
       // Moss and dirt specks, smaller further out.
       const size = (0.004 + rand() * 0.008) * (1.15 - (r / R - 0.8) * 2.5);
       const col = rand() < 0.55 ? vary(HUE.grassDark, rand, 0.06) : vary(HUE.dirt, rand, 0.08);
-      k.cyl(size, size, 0.0004, 6, col, { x, y: H, z, ry: rand() * 3, sz: 0.5 + rand() * 0.5 });
+      // Above every grass patch (tops up to H + 0.00033), each its own height.
+      k.cyl(size, size, 0.0004, 6, col, { x, y: H + 0.00001 + speck++ * LAYER_STEP, z, ry: rand() * 3, sz: 0.5 + rand() * 0.5 });
     } else if (kind < 0.75) {
       k.ico(0.0018 + rand() * 0.0028, vary(rand() < 0.3 ? HUE.stoneDark : HUE.stone, rand, 0.12), {
         x,
@@ -143,9 +153,10 @@ function ground(k: Kit, rand: () => number): void {
     const r = Math.sqrt(rand()) * R * 0.88;
     const size = 0.018 + rand() * 0.035;
     const col = rand() < 0.5 ? HUE.grassLight : HUE.grassDark;
+    // Each patch a step above the last, so overlaps never z-fight.
     k.cyl(size, size, 0.0003, 6 + Math.floor(rand() * 3), vary(col, rand, 0.05), {
       x: Math.cos(a) * r,
-      y: TOP - 0.0003,
+      y: H - 0.00025 + i * LAYER_STEP,
       z: Math.sin(a) * r,
       ry: rand() * Math.PI,
       sx: 1,
@@ -153,11 +164,13 @@ function ground(k: Kit, rand: () => number): void {
     });
   }
 
-  // Trampled earth around the campfire.
-  k.cyl(0.058, 0.058, 0.0005, 12, HUE.dirtDark, { y: TOP, sz: 0.9 });
-  k.cyl(0.048, 0.048, 0.0006, 11, HUE.dirt, { y: TOP + 0.0001, ry: 0.4 });
+  // Trampled earth around the campfire (above the moss specks, below the paths).
+  k.cyl(0.058, 0.058, 0.0005, 12, HUE.dirtDark, { y: TOP + 0.0002, sz: 0.9 });
+  k.cyl(0.048, 0.048, 0.0006, 11, HUE.dirt, { y: TOP + 0.0003, ry: 0.4 });
 
-  // Worn paths: overlapping irregular stepping patches from the fire outwards.
+  // Worn paths: overlapping irregular stepping patches from the fire outwards,
+  // each stone a step above the last.
+  let stone = 0;
   for (const [a, b] of PATHS) {
     const len = Math.hypot(b.x - a.x, b.z - a.z);
     for (let d = 0.05; d < len - 0.035; d += 0.0075) {
@@ -168,7 +181,7 @@ function ground(k: Kit, rand: () => number): void {
       const s = 0.0055 + rand() * 0.004;
       k.cyl(s, s, 0.0005, 6, vary(HUE.dirt, rand, 0.07), {
         x: a.x + (b.x - a.x) * t + jx,
-        y: TOP,
+        y: TOP + 0.0006 + stone++ * LAYER_STEP,
         z: a.z + (b.z - a.z) * t + jz,
         ry: rand() * Math.PI,
       });
