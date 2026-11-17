@@ -29,6 +29,7 @@ import { UISystem } from './ecs/ui-system.js';
 import { buildVillage } from './ecs/village-builder.js';
 import { PanelSystem } from './panel.js';
 import { PreviewCameraSystem } from './ecs/preview-camera-system.js';
+import { tuneDepthOcclusion } from './ecs/occlusion.js';
 import { setupWelcomePage } from './ui/welcome-page.js';
 
 // Shift+F on the flat page: start a brand-new village (for testing and filming).
@@ -47,7 +48,9 @@ World.create(
   projectOptions,
 ).then((world) => {
   // Real hands and objects hide the village behind them (passthrough depth).
-  // Depth is requested as optional, so sessions without it still run.
+  // Depth is requested as optional, so sessions without it still run. The
+  // test is retuned first so the real desk itself never hides the village.
+  tuneDepthOcclusion();
   world.registerSystem(DepthSensingSystem, {
     configData: {
       enableDepthTexture: true,
