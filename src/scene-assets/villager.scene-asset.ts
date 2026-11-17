@@ -344,6 +344,27 @@ function headwear(s: Sculpt, look: Look): void {
   }
 }
 
+/** An oilcloth hood over the head and shoulders, hidden until rain or snow (WeatherSystem). */
+function rainHood(look: Look): Mesh {
+  const s = new Sculpt();
+  const cloth = new Color(look.accent).multiplyScalar(0.72).getHex();
+  s.add(cap(HEAD_R + 0.0026, 0.68), cloth, { y: HEAD_C + 0.0003, z: -0.0014, rx: -0.55 });
+  // A little peak at the back.
+  s.add(new ConeGeometry(0.0028, 0.006, 10), cloth, { y: HEAD_C + 0.0068, z: -0.0062, rx: -1.9 });
+  // The cowl over the shoulders.
+  s.add(
+    lathe([
+      [0.0092, -0.0042],
+      [0.0078, -0.0022],
+      [0.0056, 0.0004],
+    ]),
+    cloth,
+  );
+  const m = s.mesh('RainHood');
+  m.visible = false;
+  return m;
+}
+
 function head(look: Look): Group {
   const face = new Sculpt();
   face.add(sphere(HEAD_R, 20, 14), look.skin, { y: HEAD_C });
@@ -374,6 +395,8 @@ function head(look: Look): Group {
   g.name = 'Head';
   g.position.y = NECK_Y;
   g.add(face.mesh('Face'), eyesMesh);
+  // A straw hat already keeps the rain off; everyone else has a hood to pull up.
+  if (look.headwear !== 'straw') g.add(rainHood(look));
   return g;
 }
 

@@ -14,7 +14,7 @@
 import { ConeGeometry, Group, Mesh, SphereGeometry } from '@iwsdk/core';
 import { LAYOUT } from '../sim/rules.ts';
 import { Kit, seeded, vary } from './lib/kit.ts';
-import { HUE, PALETTE, SMOKE_MAT, WINDOW_MAT } from './village-materials.ts';
+import { HUE, PALETTE, SMOKE_MAT, SNOW_MAT, WINDOW_MAT } from './village-materials.ts';
 
 export { createDiorama } from './diorama.scene-asset.ts';
 
@@ -120,6 +120,7 @@ export function createHut(): Group {
   root.name = 'Hut';
   root.add(k.mesh('Cottage'));
   root.add(...hutUpgrades(W, D));
+  root.add(hutSnowCap(W, D, top, chimney));
   root.add(panes.mesh('Windows', WINDOW_MAT));
 
   // Chimney smoke: three puffs that SyncSystem/AnimationSystem loop upwards.
@@ -352,6 +353,23 @@ export function createTablet(): Group {
   root.add(k.mesh('TabletStone'));
   root.add(...tabletCarvings());
   return root;
+}
+
+/** Snow over the thatch, along the eaves and on the chimney ('SnowCap', faded by WeatherSystem). */
+function hutSnowCap(W: number, D: number, top: number, chimney: { x: number; z: number }): Mesh {
+  const k = new Kit();
+  const white = 0xf6f9fc;
+  k.gable(W + 0.0135, 0.0306, D + 0.0175, white, { y: top + 0.0009 });
+  const rand = seeded(91);
+  for (const z of [(D + 0.017) / 2, -(D + 0.017) / 2]) {
+    for (let i = 0; i < 6; i++) {
+      k.ico(0.0024 + rand() * 0.0012, white, { x: -W / 2 + (i / 5) * W, y: top + 0.0018, z, sy: 0.55 });
+    }
+  }
+  k.box(0.0102, 0.0022, 0.0102, white, { x: chimney.x, y: top + 0.0306, z: chimney.z });
+  const m = k.mesh('SnowCap', SNOW_MAT);
+  m.visible = false;
+  return m;
 }
 
 /**

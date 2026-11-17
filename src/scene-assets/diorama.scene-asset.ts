@@ -17,7 +17,7 @@
 import { Group } from '@iwsdk/core';
 import { LAYOUT, RULES } from '../sim/rules.ts';
 import { START_BUILDINGS } from '../sim/world.ts';
-import { HUE } from './village-materials.ts';
+import { HUE, SNOW_MAT } from './village-materials.ts';
 import { Kit, seeded, vary } from './lib/kit.ts';
 import {
   bannerPole,
@@ -200,7 +200,9 @@ function rim(k: Kit, rand: () => number): void {
 
 // ------------------------------------------------------------------ Trees
 
-function pine(k: Kit, x: number, z: number, h: number, rand: () => number): void {
+const SNOW_WHITE = 0xf6f9fc;
+
+function pine(k: Kit, x: number, z: number, h: number, rand: () => number, snow?: Kit): void {
   k.cyl(0.0035, 0.0045, h * 0.25, 6, HUE.trunk, { x, y: H, z });
   for (let i = 0; i < 3; i++) {
     const t = i / 3;
@@ -211,9 +213,12 @@ function pine(k: Kit, x: number, z: number, h: number, rand: () => number): void
       ry: rand() * Math.PI,
     });
   }
+  // Snow on the top tier: a smaller cone with the same tip.
+  const r = 0.022 * (1 - (2 / 3) * 0.35) * (h / 0.08);
+  snow?.cone(r * 0.66, h * 0.27, 7, SNOW_WHITE, { x, y: H + h * (0.18 + (2 / 3) * 0.26) + h * 0.42 - h * 0.27 + 0.0006, z });
 }
 
-function oak(k: Kit, x: number, z: number, h: number, rand: () => number): void {
+function oak(k: Kit, x: number, z: number, h: number, rand: () => number, snow?: Kit): void {
   k.cyl(0.004, 0.006, h * 0.45, 6, HUE.trunk, { x, y: H, z });
   // Roots flaring into the ground.
   for (let i = 0; i < 3; i++) {
@@ -223,17 +228,18 @@ function oak(k: Kit, x: number, z: number, h: number, rand: () => number): void 
   for (let i = 0; i < 4; i++) {
     const a = (i / 4) * Math.PI * 2 + rand();
     const r = i === 0 ? 0 : 0.012;
-    k.ico(0.018 + rand() * 0.006, vary(rand() < 0.5 ? HUE.leaves : HUE.leavesLight, rand, 0.06), {
-      x: x + Math.cos(a) * r,
-      y: H + h * (0.62 + rand() * 0.12),
-      z: z + Math.sin(a) * r,
-      sy: 0.8,
-    });
+    const size = 0.018 + rand() * 0.006;
+    const cx = x + Math.cos(a) * r;
+    const cy = H + h * (0.62 + rand() * 0.12);
+    const cz = z + Math.sin(a) * r;
+    k.ico(size, vary(rand() < 0.5 ? HUE.leaves : HUE.leavesLight, rand, 0.06), { x: cx, y: cy, z: cz, sy: 0.8 });
+    // A cushion of snow on top of each clump.
+    snow?.ico(size * 0.82, SNOW_WHITE, { x: cx, y: cy + size * 0.5, z: cz, sy: 0.32 });
   }
 }
 
 /** Trees stand at the back and sides only, so they never block the player's view. */
-function trees(k: Kit, rand: () => number, spots: Spot[]): void {
+function trees(k: Kit, rand: () => number, spots: Spot[], snow?: Kit): void {
   let i = 0;
   for (let n = 0; n < 30; n++) {
     // Two staggered rows round the back and sides.
@@ -245,8 +251,8 @@ function trees(k: Kit, rand: () => number, spots: Spot[]): void {
     const inPalisade = deg >= PALISADE_FROM - 4 && deg <= PALISADE_TO + 4;
     if (z > 0.04 || inPalisade || nearBuilding(x, z, 0.005) || onPath(x, z, 0.03)) continue;
     const h = 0.065 + rand() * 0.03;
-    if (i++ % 2 === 0) pine(k, x, z, h, rand);
-    else oak(k, x, z, h * 0.85, rand);
+    if (i++ % 2 === 0) pine(k, x, z, h, rand, snow);
+    else oak(k, x, z, h * 0.85, rand, snow);
     spots.push({ x, z, d: 0.045 });
   }
 }
@@ -365,11 +371,12 @@ export function createDiorama(): Group {
   const k = new Kit();
   const base = new Kit();
   const spots: Spot[] = [];
+  const snow = new Kit();
   pedestal(base);
   rim(base, rand);
   ground(k, rand);
   palisade(k, rand);
-  trees(k, rand, spots);
+  trees(k, rand, spots, snow);
   scatter(k, rand);
   well(k, PROPS.well.x, PROPS.well.z);
   woodpile(k, PROPS.woodpile.x, PROPS.woodpile.z, rand);
@@ -392,6 +399,10 @@ export function createDiorama(): Group {
   edgeMesh.visible = false;
   root.add(edgeMesh);
   root.userData.shadowSpots = spots;
+  // Snow on the trees ('SnowTrees'), faded in by WeatherSystem.
+  const snowTrees = snow.mesh('SnowTrees', SNOW_MAT);
+  snowTrees.visible = false;
+  root.add(snowTrees);
 
   const pennant = makePennant();
   pennant.position.set(PROPS.banner.x, poleTop, PROPS.banner.z);

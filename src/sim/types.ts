@@ -140,7 +140,8 @@ export interface Building {
   blessed: number; // seconds of Bless remaining
 }
 
-export type Weather = 'clear' | 'drought' | 'storm';
+/** Drought and storm are dangerous events; rain and snow are gentle moods. */
+export type Weather = 'clear' | 'drought' | 'storm' | 'rain' | 'snow';
 export type Phase = 'day' | 'dusk' | 'ended';
 
 export interface ChronicleEntry {
@@ -183,6 +184,8 @@ export interface World {
   phaseTime: number;
   timeOfDay: number; // 0..1 within a day
   weather: Weather;
+  /** 0..1: how much snow lies on the village (settles while snowing, melts after). */
+  snowCover: number;
   favor: number; // 0..10, not 0..1
   food: number; // village stock, 0..100
   /** Deaths from hunger or lightning today (sim/life.ts). */

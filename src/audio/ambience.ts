@@ -1,12 +1,14 @@
 /**
  * The village's ambient sound (WebAudio, no files): wind that gusts and
  * swells in a storm, the campfire crackling (louder at dusk and night),
- * birdsong on fair days, and rain hiss in a storm. Everything is generated
+ * birdsong on fair days, rain hiss in a storm, a soft rain with distant
+ * thunder rumbling now and then, and the hush of snow (muffled wind, a
+ * louder fire, no birds). Everything is generated
  * from noise and short tones; levels glide so moods blend.
  */
 import { audioBus } from './sfx.ts';
 
-export type AmbienceMood = 'off' | 'day' | 'dusk' | 'night' | 'storm';
+export type AmbienceMood = 'off' | 'day' | 'dusk' | 'night' | 'storm' | 'rain' | 'snow';
 
 const TICK_MS = 50;
 const AHEAD = 0.15;
@@ -19,6 +21,8 @@ interface Level {
   crackles: number;
   rain: number;
   birds: boolean;
+  /** Distant thunder rumbles now and then (gentle rain, not the storm). */
+  rumble?: boolean;
 }
 
 const LEVELS: Record<AmbienceMood, Level> = {
@@ -27,6 +31,8 @@ const LEVELS: Record<AmbienceMood, Level> = {
   dusk: { wind: 0.04, windHz: 450, fire: 0.6, crackles: 7, rain: 0, birds: false },
   night: { wind: 0.03, windHz: 380, fire: 0.75, crackles: 8, rain: 0, birds: false },
   storm: { wind: 0.13, windHz: 750, fire: 0.2, crackles: 3, rain: 0.05, birds: false },
+  rain: { wind: 0.04, windHz: 560, fire: 0.25, crackles: 3, rain: 0.045, birds: false, rumble: true },
+  snow: { wind: 0.028, windHz: 300, fire: 0.65, crackles: 6, rain: 0, birds: false },
 };
 
 let ctx: AudioContext | null = null;
@@ -42,6 +48,7 @@ let mood: AmbienceMood = 'off';
 let nextCrackle = 0;
 let nextBird = 0;
 let nextGust = 0;
+let nextRumble = 0;
 
 function loopNoise(ac: AudioContext): AudioBufferSourceNode {
   const src = ac.createBufferSource();
@@ -120,6 +127,30 @@ function crackle(ac: AudioContext, t: number): void {
   src.stop(t + len + 0.02);
 }
 
+/** Distant thunder: a deep, slow roll of filtered noise, far off to one side. */
+function rumble(ac: AudioContext, t: number): void {
+  if (!noise || !out) return;
+  const src = ac.createBufferSource();
+  src.buffer = noise;
+  src.loop = true;
+  const lp = ac.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 110 + Math.random() * 60;
+  lp.Q.value = 0.7;
+  const g = ac.createGain();
+  const peak = 0.22 + Math.random() * 0.12;
+  const len = 3 + Math.random() * 2;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak * 0.5, t + 0.4);
+  g.gain.linearRampToValueAtTime(peak, t + 1.1);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  const p = ac.createStereoPanner();
+  p.pan.value = (Math.random() - 0.5) * 1.4;
+  src.connect(lp).connect(g).connect(p).connect(out);
+  src.start(t, Math.random() * 2);
+  src.stop(t + len + 0.1);
+}
+
 /** A little bird: two to four quick rising chirps. */
 function bird(ac: AudioContext, t: number): void {
   if (!out) return;
@@ -161,6 +192,13 @@ function tick(): void {
       if (nextBird < horizon) {
         bird(ac, nextBird);
         nextBird += 4 + Math.random() * 7;
+      }
+    }
+    if (L.rumble) {
+      if (nextRumble < now) nextRumble = now + 4 + Math.random() * 6;
+      if (nextRumble < horizon) {
+        rumble(ac, nextRumble);
+        nextRumble += 12 + Math.random() * 14;
       }
     }
     // Gusts: the wind's level and pitch wander.

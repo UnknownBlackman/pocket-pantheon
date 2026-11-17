@@ -10,6 +10,9 @@ export type ChronicleKind =
   | 'first-harvest'
   | 'harvest-day'
   | 'drought'
+  | 'rainy-day'
+  | 'snowfall'
+  | 'first-snow'
   | 'fields-dried'
   | 'storm'
   | 'storm-survived'
@@ -47,6 +50,9 @@ const TEMPLATES: Record<ChronicleKind, (v: Vars) => string> = {
   'harvest-day': (v) =>
     `Day ${v.day}: the fields gave ${v.count} harvest${v.count === 1 ? '' : 's'}.`,
   drought: (v) => `Day ${v.day}: no rain came, and the soil began to crack.`,
+  'rainy-day': (v) => `Day ${v.day}: a soft rain fell all day, and the fields drank deep.`,
+  snowfall: (v) => `Day ${v.day}: snow fell, and the village gathered round the fire.`,
+  'first-snow': (v) => `Day ${v.day}: the first snow the village had ever seen fell from the sky.`,
   'fields-dried': (v) =>
     `Day ${v.day}: the fields dried up and the villagers looked to the sky.`,
   storm: (v) => `Day ${v.day}: dark clouds rolled in and a storm broke.`,

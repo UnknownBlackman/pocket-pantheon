@@ -168,6 +168,10 @@ export class SpeechSystem extends createSystem({
         if (e.weather === 'storm') {
           this.swatNarrated = false;
           this.bark(this.nearest(0, 0), 'panic', true);
+        } else if (e.weather === 'rain') {
+          this.bark(this.nearest(0, 0), 'drizzle', true);
+        } else if (e.weather === 'snow') {
+          this.bark(this.nearest(0, 0), 'snowfall', true);
         }
       }),
       on('session.dusk', () => {

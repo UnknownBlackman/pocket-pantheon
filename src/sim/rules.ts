@@ -156,6 +156,16 @@ export const RULES = {
     droughtHungerMultiplier: 1.4,
     /** Drought thirst panic happens when hunger is above this during drought. */
     droughtPanicHunger: 0.85,
+    /** After the first session each day rolls its weather with these odds. */
+    odds: { clear: 0.45, rain: 0.2, snow: 0.12, drought: 0.11, storm: 0.12 },
+    /** Crops grow this much slower under snow (villagers are not hungrier). */
+    snowGrowthMultiplier: 0.5,
+    /** Snow takes this long to settle fully, and to melt away afterwards. */
+    snowSettleSeconds: 40,
+    snowMeltSeconds: 30,
+    /** Villagers hurry in the rain and wade slowly through snow. */
+    rainPace: 1.15,
+    snowPace: 0.88,
   },
 
   mood: {

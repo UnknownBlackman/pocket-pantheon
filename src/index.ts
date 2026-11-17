@@ -16,6 +16,7 @@ import { HandFxSystem } from './ecs/hand-fx-system.js';
 import { HandGestureSystem } from './ecs/hand-gesture-system.js';
 import { HandPresenceSystem } from './ecs/hand-presence-system.js';
 import { PowerSystem } from './ecs/power-system.js';
+import { WeatherSystem } from './ecs/weather-system.js';
 import { ProgressSystem } from './ecs/progress-system.js';
 import { SaveSystem } from './ecs/save-system.js';
 import { VillageRoot } from './ecs/components.js';
@@ -67,6 +68,7 @@ World.create(
     .registerSystem(SyncSystem, { priority: P.sync })
     .registerSystem(AnimationSystem, { priority: P.animation })
     .registerSystem(EffectsSystem, { priority: P.effects })
+    .registerSystem(WeatherSystem, { priority: P.effects })
     .registerSystem(HandFxSystem, { priority: P.effects })
     .registerSystem(AudioSystem, { priority: P.audio })
     .registerSystem(MusicSystem, { priority: P.audio })

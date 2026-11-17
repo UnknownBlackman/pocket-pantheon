@@ -137,6 +137,7 @@ export function createWorld(seed = 1): World {
     phaseTime: 0,
     timeOfDay: 0,
     weather: 'clear',
+    snowCover: 0,
     favor: R.favor.start,
     food: 40,
     deathsToday: 0,
@@ -217,13 +218,24 @@ export function duskScore(world: World): { score: number; stars: number } {
 export function weatherForDay(world: World): Weather {
   if (world.sessionDay === 0) return 'clear';
   if (world.session === 1) return world.sessionDay === 1 ? 'drought' : 'storm';
-  return pick(world, ['clear', 'drought', 'storm'] as const);
+  const odds = R.weather.odds;
+  let roll = random(world) * (odds.clear + odds.rain + odds.snow + odds.drought + odds.storm);
+  for (const w of ['clear', 'rain', 'snow', 'drought', 'storm'] as const) {
+    roll -= odds[w];
+    if (roll < 0) return w;
+  }
+  return 'clear';
 }
 
 export function setWeather(world: World, weather: Weather, bus?: EventBus): void {
   if (world.weather === weather) return;
   world.weather = weather;
   if (weather === 'drought') addChronicle(world, 'drought', {}, [], bus);
+  if (weather === 'rain') addChronicle(world, 'rainy-day', {}, [], bus);
+  if (weather === 'snow') {
+    const first = !world.chronicle.some((e) => e.kind === 'snowfall' || e.kind === 'first-snow');
+    addChronicle(world, first ? 'first-snow' : 'snowfall', {}, [], bus);
+  }
   if (weather === 'storm') {
     world.totals.storms += 1;
     initStorm(world);
@@ -311,7 +323,7 @@ function updateBuildings(world: World, dt: number, bus?: EventBus): void {
     if (b.sheltered > 0) b.sheltered = Math.max(0, b.sheltered - dt);
     if (b.kind !== 'field') continue;
     // Rain keeps fields watered while it lasts.
-    let raining = world.weather === 'storm';
+    let raining = world.weather === 'storm' || world.weather === 'rain';
     for (const e of world.effects) {
       if (e.kind !== 'rain') continue;
       const dx = b.pos.x - e.pos.x;
@@ -363,6 +375,11 @@ export function tick(world: World, dt: number, bus?: EventBus): void {
 
   updateEffects(world, dt);
   updateStorm(world, dt);
+  // Snow settles while it falls and melts once it stops.
+  world.snowCover =
+    world.weather === 'snow'
+      ? Math.min(1, world.snowCover + dt / R.weather.snowSettleSeconds)
+      : Math.max(0, world.snowCover - dt / R.weather.snowMeltSeconds);
   guideTopUp(world);
   updateLessons(world, dt, bus);
   updateBuildings(world, dt, bus);

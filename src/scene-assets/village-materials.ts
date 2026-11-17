@@ -78,3 +78,16 @@ export const HUE = {
   cream: 0xf2e6c8,
   bread: 0xc0874a,
 } as const;
+
+/**
+ * Snow lying on roofs and trees (vertex-coloured white). Shared by every
+ * snow mesh; WeatherSystem fades its opacity with World.snowCover.
+ */
+export const SNOW_MAT = new MeshStandardMaterial({
+  vertexColors: true,
+  roughness: 0.85,
+  flatShading: true,
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+});

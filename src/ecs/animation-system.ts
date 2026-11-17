@@ -76,7 +76,8 @@ export class AnimationSystem extends createSystem({
   private animateVillageLife(delta: number, time: number): void {
     const sim = game.sim;
     const evening = sim.phase !== 'day' || sim.timeOfDay >= RULES.session.nightStart - 0.08;
-    const target = evening ? 1.8 : sim.weather === 'storm' ? 0.9 : 0.15;
+    const gloomy = sim.weather === 'storm' ? 0.9 : sim.weather === 'rain' || sim.weather === 'snow' ? 0.6 : 0.15;
+    const target = evening ? 1.8 : gloomy;
     this.windowGlow += (target - this.windowGlow) * Math.min(1, delta * 0.8);
     WINDOW_MAT.emissiveIntensity = this.windowGlow;
 

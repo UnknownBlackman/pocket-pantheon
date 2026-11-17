@@ -13,7 +13,7 @@ export interface GameEvents {
   };
   'power.used': { kind: 'bless' | 'rain' | 'shelter'; targetId: string | null };
   'day.changed': { dayIndex: number };
-  'weather.changed': { weather: 'clear' | 'drought' | 'storm' };
+  'weather.changed': { weather: 'clear' | 'drought' | 'storm' | 'rain' | 'snow' };
   'chronicle.added': { index: number; text: string };
   'session.dusk': { dayIndex: number };
   'village.placed': { source: 'plane' | 'hit-test' | 'fallback' };

@@ -93,7 +93,10 @@ export function assignIntent(
     v.target = { x: building.pos.x + Math.cos(angle) * r, z: building.pos.z + Math.sin(angle) * r };
   } else if (intent === 'idle') {
     v.targetId = null;
-    if (isDependent(v)) {
+    const cover = coverSpot(world, v);
+    if (cover) {
+      v.target = cover; // under the eaves in the rain, by the fire in the snow
+    } else if (isDependent(v)) {
       v.target = null; // waits where they stand
     } else {
       // Wander a little.
@@ -108,6 +111,42 @@ export function assignIntent(
     v.targetId = null;
     v.target = null;
   }
+}
+
+/**
+ * Where an idle villager takes cover: under a cottage's eaves (beside its
+ * door, facing the village centre) in the rain, round the campfire in the
+ * snow. Null in other weather.
+ */
+export function coverSpot(world: World, v: Villager): { x: number; z: number } | null {
+  if (world.weather === 'rain') {
+    const hut = buildingById(world, v.homeId) ?? nearestOfKind(world, v, 'hut');
+    if (!hut) return null;
+    const len = Math.hypot(hut.pos.x, hut.pos.z) || 1;
+    const fx = -hut.pos.x / len;
+    const fz = -hut.pos.z / len;
+    const side = randomRange(world, -0.022, 0.022);
+    return { x: hut.pos.x + fx * 0.042 - fz * side, z: hut.pos.z + fz * 0.042 + fx * side };
+  }
+  if (world.weather === 'snow') {
+    const fire = nearestOfKind(world, v, 'campfire');
+    if (!fire) return null;
+    const a = random(world) * Math.PI * 2;
+    const r = randomRange(world, 0.06, 0.08);
+    return { x: fire.pos.x + Math.cos(a) * r, z: fire.pos.z + Math.sin(a) * r };
+  }
+  return null;
+}
+
+/** True when the villager is already sheltering (or the weather is fine). */
+function hasCover(world: World, v: Villager): boolean {
+  if (world.weather !== 'rain' && world.weather !== 'snow') return true;
+  const kind = world.weather === 'rain' ? 'hut' : 'campfire';
+  const reach = world.weather === 'rain' ? 0.06 : 0.1;
+  for (const b of world.buildings) {
+    if (b.kind === kind && Math.hypot(b.pos.x - v.pos.x, b.pos.z - v.pos.z) < reach) return true;
+  }
+  return v.target !== null; // already on the way
 }
 
 /** Children (under LIFE.adultAge) never farm or pray: they rest or play near family. */
@@ -201,8 +240,10 @@ export function decide(world: World, v: Villager): void {
     if (intent !== 'idle') {
       if (v.targetId !== null) return; // keep going
     } else {
-      // Contented villagers mostly stand around, sometimes wander.
-      if (v.target !== null || random(world) > R.decisions.wanderChance) return;
+      // Contented villagers mostly stand around, sometimes wander; in rain
+      // or snow they first go and take cover.
+      const seekCover = !hasCover(world, v);
+      if (!seekCover && (v.target !== null || random(world) > R.decisions.wanderChance)) return;
     }
   }
 
@@ -235,7 +276,8 @@ function doWork(world: World, v: Villager, dt: number, bus?: EventBus): void {
     case 'farm': {
       v.activity = 'farm';
       if (b.water >= R.farming.dryBelow) {
-        b.growth += R.farming.growthPerWorker * workMultiplier(world, v, b) * dt;
+        const snowy = world.weather === 'snow' ? R.weather.snowGrowthMultiplier : 1;
+        b.growth += R.farming.growthPerWorker * workMultiplier(world, v, b) * snowy * dt;
         if (b.growth >= R.farming.ripeAt) {
           b.growth = 0;
           world.food = Math.min(100, world.food + R.farming.harvestFood);
@@ -427,7 +469,8 @@ export function updateVillager(world: World, v: Villager, dt: number, bus?: Even
     const pace =
       (v.limp > 0 ? LIFE.limpSpeed : 1) *
       (childOf(v) && v.intent === 'play' ? LIFE.childPlaySpeed : 1) *
-      agePace(v.age);
+      agePace(v.age) *
+      (world.weather === 'rain' ? R.weather.rainPace : world.weather === 'snow' ? R.weather.snowPace : 1);
     const arrived = stepTowards(v.pos, v.target, R.village.walkSpeed * pace * dt);
     if (!arrived) {
       v.activity = 'walk';

@@ -22,11 +22,14 @@ export class MusicSystem extends createSystem({}) {
     const sim = game.sim;
     let mood: MusicMood = 'day';
     if (sim.weather === 'storm') mood = 'storm';
+    else if (sim.weather === 'rain' && sim.phase === 'day') mood = 'dusk'; // softer, no drums
+    else if (sim.weather === 'snow' && sim.phase === 'day') mood = 'night'; // hushed
     else if (sim.phase !== 'day') mood = 'dusk';
     else if (sim.timeOfDay >= RULES.session.nightStart) mood = 'night';
     music.setMood(mood);
     music.setDucked(game.paused || game.godAway);
     // Wind, fire and birds only around the village itself.
-    ambience.set(playing && !game.paused ? mood : 'off');
+    const weatherAmbience = sim.phase === 'day' && (sim.weather === 'rain' || sim.weather === 'snow') ? sim.weather : mood;
+    ambience.set(playing && !game.paused ? weatherAmbience : 'off');
   }
 }

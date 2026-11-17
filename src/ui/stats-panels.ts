@@ -13,7 +13,7 @@ import { diamond, drawBar, parchment, roundRect, rule, UI_BODY, UI_COLORS, UI_FO
 export interface VillageStats {
   day: number;
   timeLabel: string;
-  weather: 'clear' | 'drought' | 'storm';
+  weather: 'clear' | 'drought' | 'storm' | 'rain' | 'snow';
   favor: number;
   favorMax: number;
   faith: number;
@@ -106,6 +106,34 @@ function board(ctx: CanvasRenderingContext2D, w: number, h: number): void {
 }
 
 function weatherIcon(ctx: CanvasRenderingContext2D, kind: VillageStats['weather'], x: number, y: number): void {
+  if (kind === 'rain' || kind === 'snow') {
+    // A soft cloud with raindrops or snowflakes beneath.
+    ctx.fillStyle = kind === 'rain' ? '#b8c2ce' : '#dde4ec';
+    for (const [dx, dy, r] of [[-12, -4, 12], [4, -12, 15], [18, -3, 11]]) {
+      ctx.beginPath();
+      ctx.arc(x + dx, y + dy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (const [dx, dy] of [[-12, 16], [2, 22], [16, 14], [-4, 34], [12, 32]]) {
+      if (kind === 'rain') {
+        ctx.strokeStyle = '#6cb8ff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x + dx, y + dy);
+        ctx.lineTo(x + dx - 3, y + dy + 9);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#8aa0b8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x + dx, y + dy, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+    return;
+  }
   if (kind === 'storm') {
     ctx.fillStyle = '#9aa2ae';
     for (const [dx, dy, r] of [[-12, 2, 13], [4, -6, 16], [18, 3, 12]]) {
@@ -150,7 +178,7 @@ export function drawSignboard(panel: CanvasPanel, s: VillageStats): void {
   paint(ctx, `Day ${s.day}`, 40, 72, `700 44px ${UI_FONT}`);
   paint(ctx, s.timeLabel, 40 + 150, 70, `700 30px ${UI_BODY}`, PAINT_DIM);
   weatherIcon(ctx, s.weather, W - 70, 54);
-  const weatherWord = s.weather === 'clear' ? 'Fair' : s.weather === 'drought' ? 'Drought' : 'Storm';
+  const weatherWord = { clear: 'Fair', drought: 'Drought', storm: 'Storm', rain: 'Rain', snow: 'Snow' }[s.weather];
   ctx.textAlign = 'right';
   paint(ctx, weatherWord, W - 108, 70, `700 28px ${UI_BODY}`, PAINT_DIM);
   ctx.textAlign = 'left';

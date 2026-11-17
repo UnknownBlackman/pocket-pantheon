@@ -42,6 +42,7 @@ export function deserializeWorld(json: string): World | null {
     w.graves ??= [];
     w.stormClouds ??= [];
     w.stormRegrow ??= [];
+    w.snowCover ??= 0;
     w.traffic ??= [];
     // Saves from before the guided tutorial: those players already know the game.
     w.guide ??= { step: 'done', active: false };
