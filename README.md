@@ -2,6 +2,8 @@
 
 *A living miniature civilization that makes a home on your desk.*
 
+**[Play it now: pocket-pantheon.vercel.app](https://pocket-pantheon.vercel.app)** (Meta Quest browser)
+
 Imagine putting on your Quest and watching a tiny village float down onto your
 real table. The villagers stop what they're doing, look up, and wave at the giant
 in the sky.
@@ -135,7 +137,15 @@ src/
 tests/           Node tests for the simulation
 ```
 
-## Try it
+## Play it now
+
+Pocket Pantheon is live at **[pocket-pantheon.vercel.app](https://pocket-pantheon.vercel.app)**.
+
+Open that link in the Meta Quest browser, make sure **hand tracking** is on in
+the headset settings, put your controllers down, sit at a table and press
+**Enter the village**. There's nothing to install.
+
+## Run it yourself
 
 ```sh
 npm install
